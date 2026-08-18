@@ -1,0 +1,17 @@
+
+component D-latch (clk,d) (sto) (
+	set = clk&d
+	res = clk&~d
+	sto = ~(nto|res)
+	nto = ~(sto|set)
+)
+
+module 2-1-multiplex (sel,a,b) (d) (
+	posA = a&sel
+	posB = a&~sel
+	out = posA|posB
+)
+module main (sel,a,b,clk) (data) (
+	@2-1-multiplex(sel,a,b,plexed)
+	@D-latch(clk,plexed,data)
+)

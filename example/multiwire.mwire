@@ -1,0 +1,22 @@
+
+component xor (a,b) (xo) (
+	and =  a& b
+	nnd = ~a&~b
+	xo = ~(and|nnd)
+)
+
+component bit-adder (a,b,carry) (bit-out,carry-out) (
+	st0and = a&b
+	@xor(a,b,  st0xor)
+	st1and = st0xor&carry
+
+	@xor(st0xor,carry,  bit-out)
+	carry-out = st0and|st1and
+)
+
+module main (a:4,b:4,c) (out:4,carry) (
+	@bit-adder(a:0,b:0,c ,  out:0,   c1)
+	@bit-adder(a:1,b:1,c1,  out:1,   c2)
+	@bit-adder(a:2,b:2,c2,  out:2,   c3)
+	@bit-adder(a:3,b:3,c3,  out:3,carry)
+)
