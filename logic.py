@@ -11,7 +11,7 @@ class Token:
         self.lst    = []
         self.invert = False
         if(len(self.data) == 1): self.typ = self.data
-        if(self.data in "~&|()=,"):
+        if(self.data in "~&|()=,01"):
             self.typ = self.data
         else:
             #if(self.data.isalnum()):
@@ -143,7 +143,7 @@ class Logic:
             e.used = True
         #tExpr.used = True
         tModu.lst = [tName,tIn,tOut,tExpr]
-        mod = component.Module(tModu)
+        mod = component.Module(tModu,tIn,tOut,tExpr)
         return mod
     @staticmethod
     def parseTokenTopLevel(tokens)->list(component.Module):
@@ -199,12 +199,12 @@ class Logic:
             if(t is not None):
                 tokens.append(t)
         #Logic.parseTokenExpr(tokens)
-        Logic.parseTokenTopLevel(tokens)
+        m = Logic.parseTokenTopLevel(tokens)
         i = 0
         while i < len(tokens):
             print(tokens[i])
             i = Logic.findNextToken(tokens,i + 1,len(tokens))
-        return tokens
+        return (tokens,m)
     #
 #class Logic
 
