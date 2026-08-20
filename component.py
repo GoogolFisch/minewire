@@ -20,11 +20,19 @@ class Point:
         return f"{self.typ}:{self.y}:{self.x}"
 
 class Wire:
-    __slots__ = ("name","start","end")
+    __slots__ = ("name","lane","refs","start","end")
     def __init__(self,name):
         self.name  = name
+        self.lane  = 0
         self.start = 0
-        self.end = 999
+        self.end   = 0
+        self.refs  = []
+    def reset(self):
+        self.start = 9999
+        self.end   = 0
+    def update(self,lane):
+        self.start = min(lane,self.start)
+        self.end   = max(lane,self.end  )
     def __str__(self):
         return f"{self.name}-<{self.start},{self.end}>"
 
@@ -34,13 +42,15 @@ class CrossLet:
         self.wire      = wire
         self.dirUp     = dirUp
         self.inverting = invert
+        self.wire.refs.append(self)
     def __str__(self):
         doNot = ["","Not"][self.inverting]
         textDir = ["Down","Up"][self.dirUp]
         return f"{doNot} {textDir} {self.wire.name}"
 class Connection:
-    __slots__ = ("inLet","outLet")
+    __slots__ = ("inLet","outLet","lane")
     def __init__(self,inLet:list(CrossLet),outLet:list(CrossLet)):
+        self.lane   = 0
         self.inLet  = inLet
         self.outLet = outLet
     def __str__(self):
@@ -96,12 +106,13 @@ class Module:
         for w in self.wires:
             if(w.name == nam):
                 return w
-        wir = Wire(nam)
+        wir = Wire(nam)#,len(self.wires))
         self.namedWires.append(wir)
         return wir
     def parseExpr(self,e)->Wire:
-        if(e.typ == "word"):
-            return self.maybeAddWire(e)
+        if(e.typ == "word"): return self.maybeAddWire(e)
+        if(e.typ == "0"): return self.maybeAddWire(e)
+        if(e.typ == "1"): return self.maybeAddWire(e)
         if(e.typ == "|" or e.typ == "&"):
             no = e.typ == "&"
             w = Wire(getRandName())
@@ -126,7 +137,66 @@ class Module:
                 if(refName[0] == '@'):refName = refName[1:]
                 m = Module.lookup[refName]
                 m.parseFunctionList()
+                fet = m.namespaceCopy()
                 # TODO
+        self.optimization()
+    def namespaceCopy(self,nameWire:list(Wire))->Module:
+        pass
+    def length(self):
+        akku = 0
+        for w in self.wires: w.reset()
+        for w in self.interfaceWires:
+            w.update(0)
+        for conn in self.connections:
+            bLow = 9999
+            bHig = 0
+            for cx in conn.inLet:
+                cx.wire.update(conn.lane)
+                bLow = min(bLow,cx.wire.lane)
+                bHig = max(bHig,cx.wire.lane)
+            if(bLow > bHig):
+                print("(2026-08-20T19:46:08) low high error")
+                continue
+            akku += bHig - bLow
+        for w in self.wires:
+            if(e.start > e.end):
+                print("(2026-08-20T19:47:23) low high error")
+                continue
+            akku += w.end - w.start
+        return akku
+    def layoutOptimazation(self):
+        for i,w in enumerate(self.wires): w.lane = i
+        for i,c in enumerate(self.connections): c.lane = i
+    def optimization(self):
+        didChange = True
+        while didChange:
+            neededWires = self.interfaceWire.copy()
+            #neededWires.append(self.)
+            didChange = False
+            #print(self.connections,flush=True)
+            for conn in reversed(self.connections):
+                for cx in reversed(conn.inLet):
+                    if(cx.wire not in neededWires):
+                        neededWires.append(cx.wire)
+                    if(cx.wire.name == "0"):
+                        conn.inLet.remove(cx)
+                        didChange = True
+                        if(cx.inverting):
+                            self.connections.remove(conn)
+                            break
+                    if(cx.wire.name == "1"):
+                        conn.inLet.remove(cx)
+                        didChange = True
+                        if(not cx.inverting):
+                            self.connections.remove(conn)
+                            break
+                #for cx in conn.inLet
+            #for conn in self.connections
+            for wir in reversed(self.wires):
+                if(wir not in neededWires and wir not in self.interfaceWires):
+                    self.wires.remove(wir)
+    #def optimization()
+
 #class Module
 
 
