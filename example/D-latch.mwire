@@ -6,9 +6,9 @@ component D-latch (clk,d) (sto) (
 	nto = ~(sto|set)
 )
 
-module 2-1-multiplex (sel,a,b) (d) (
+module 2-1-multiplex (sel,a,b) (out) (
 	posA = a&sel
-	posB = a&~sel
+	posB = b&~sel
 	out = posA|posB
 )
 module main (sel,a,b,clk) (data) (

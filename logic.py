@@ -109,7 +109,7 @@ class Logic:
             if(t.typ == "(" and lastToken.typ == "word"): #)
                i = Logic.findNextToken(tokens,i + 1,end)
                tNext = tokens[i]
-               lastToken.lst = Logic.ensureInList(t)
+               lastToken.lst = Logic.ensureInList(tNext).lst
                tNext.used = True
                t = lastToken
             if("(" == "(" and t.typ == ")"):#)
@@ -202,7 +202,7 @@ class Logic:
         m = Logic.parseTokenTopLevel(tokens)
         i = 0
         while i < len(tokens):
-            print(tokens[i])
+            #print(tokens[i])
             i = Logic.findNextToken(tokens,i + 1,len(tokens))
         return (tokens,m)
     #
