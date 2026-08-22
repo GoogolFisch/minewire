@@ -6,9 +6,19 @@ import sys
 import logic
 
 
+settings = {
+        "in":"./example/D-latch.mwire"
+        }
+def parseSettings(args=sys.argv[1:]):
+    for a in args:
+        spl = a.split("=")
+        settings[spl[0]] = "=".join(spl[1:])
+    print(settings)
+
 
 def main():
-    fName = "./example/D-latch.mwire"
+    parseSettings()
+    fName = settings["in"]
     with open(fName,"r")as fptr:
         fData = fptr.read()
     #fn = sys.argv[1]
