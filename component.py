@@ -24,16 +24,22 @@ class Point:
         return f"{self.typ}:{self.y}:{self.x}"
 
 class Wire:
-    __slots__ = ("name","lane","refs","start","end")
+    __slots__ = ("name","lane","refs",
+                 "start","end","fixedPoint",
+                 )
     def __init__(self,name):
         self.name  = name
         self.lane  = 0
         self.start = 0
         self.end   = 0
         self.refs  = []
+        # wireLane,connectionLane
+        self.fixedPoint = None
     def reset(self):
         self.start = LENGTH_MAX
         self.end   = 0
+        if(self.fixedPoint is not None):
+            self.update(self.fixedPoint[1])
     def update(self,lane):
         self.start = min(lane,self.start)
         self.end   = max(lane,self.end  )
@@ -41,11 +47,12 @@ class Wire:
         return f"{self.name}-<{self.start},{self.end}>"
 
 class CrossLet:
-    __slots__ = ("wire","dirUp","inverting","name")
+    __slots__ = ("wire","conn","dirUp","inverting","name")
     def __init__(self,wire,dirUp=True,invert=False):
         self.wire      = wire
         self.dirUp     = dirUp
         self.inverting = invert
+        self.conn      = None
         self.wire.refs.append(self)
     def __str__(self):
         doNot = ["","Not"][self.inverting]
@@ -57,6 +64,8 @@ class Connection:
         self.lane   = 0
         self.inLet  = inLet
         self.outLet = outLet
+        for cx in inLet :cx.conn = self
+        for cx in outLet:cx.conn = self
     def reset(self):
         self.start = LENGTH_MAX
         self.end   = 0
@@ -119,6 +128,9 @@ class Module:
             if(w.name == nam):
                 return w
         wir = Wire(nam)#,len(self.namedWires))
+        for ifwToken in self.interfaceWire:
+            if(ifwToken.data == nam):
+                wir.fixedPoint = (-1,0)
         self.namedWires.append(wir)
         return wir
     def parseExpr(self,e)->Wire:
@@ -165,7 +177,7 @@ class Module:
                         outLets.append(CrossLet(cWire,cx.dirUp,cx.inverting))
                     self.connections.append(Connection(inLets,outLets))
                 # TODO
-        self.optimization()
+        self.optimisation()
     def namespaceTranslation(self,nameWire:list(str))->dict:
         if(len(nameWire) != len(self.functionWires)):
             print(f"(2026-08-21T13:00:23) {nameWire} -> "+ 
@@ -196,8 +208,8 @@ class Module:
     def length(self):
         akku = 0
         for w in self.namedWires: w.reset()
-        for w in self.interfaceWire:
-            w.update(0)
+        #for w in self.interfaceWire:
+        #    w.update(0)
         for conn in self.connections:
             conn.reset()
             for cx in conn.inLet:
@@ -220,15 +232,16 @@ class Module:
                 if(w is w2):continue
                 if(w2.end > w.start and w2.start < w.end):
                     akku += LENGTH_MAX
-            if(e.start > e.end):
+            if(w.start > w.end):
                 print("(2026-08-20T19:47:23) low high error")
                 continue
             akku += w.end - w.start
         return akku
-    def layoutOptimazation(self):
-        for i,w in enumerate(self.namedWires): w.lane = i
-        for i,c in enumerate(self.connections): c.lane = i
-    def optimization(self):
+    def layoutOptimisation(self):
+        for i,w in enumerate(self.namedWires): w.lane = i + 1
+        for i,c in enumerate(self.connections): c.lane = i + 1
+        self.length()
+    def optimisation(self):
         didChange = True
         while didChange:
             neededWires = self.interfaceWire.copy()
@@ -256,7 +269,7 @@ class Module:
             for wir in reversed(self.namedWires):
                 if(wir not in neededWires and wir not in self.interfaceWire):
                     self.namedWires.remove(wir)
-    #def optimization()
+    #def optimisation()
 
 #class Module
 

@@ -4,6 +4,7 @@
 
 import sys
 import logic
+import schematica
 
 
 settings = {
@@ -26,8 +27,11 @@ def main():
     #for m in modules: print(m)
     mainModule = logic.component.Module.lookup["main"]
     mainModule.parseFunctionList()
+    mainModule.optimisation()
+    mainModule.layoutOptimisation()
     #for m in modules: print(m)
     print(mainModule)
+    schematica.createSchematic(settings,mainModule)
     #tokens = component.Logic.parseLogic("nto = ~(sto|set)\n")
 
 
