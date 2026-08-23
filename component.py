@@ -218,10 +218,10 @@ class Module:
             for cx in conn.outLet:
                 cx.wire.update(conn.lane)
                 conn.update(cx.wire.lane)
-            if(conn.end > conn.start):
+            if(conn.start > conn.end):
                 print("(2026-08-20T19:46:08) low high error")
                 continue
-            akku += bHig - bLow
+            akku += conn.end - conn.start
         for conn in self.connections:
             for c2 in self.connections:
                 if(conn is c2):continue

@@ -14,11 +14,11 @@ class Blocks:
     torchPlusX = BlockState("minecraft:redstone_wall_torch",
                             facing="east",lit="true")
 
-    repeatMinuxX = BlockState("minecraft:repeater",
+    repeatMinusX = BlockState("minecraft:repeater",
                             delay="1",facing="east",locked="false",powered="false")
     repeatPlusX = BlockState("minecraft:repeater",
                             delay="1",facing="west",locked="false",powered="false")
-    repeatMinuxZ = BlockState("minecraft:repeater",
+    repeatMinusZ = BlockState("minecraft:repeater",
                             delay="1",facing="south",locked="false",powered="false")
     repeatPlusZ = BlockState("minecraft:repeater",
                             delay="1",facing="north",locked="false",powered="false")
@@ -58,7 +58,7 @@ class SchemGen:
             if(region[dx + 2,2,dz].id == "minecraft:air"):
                 region[dx + 2,2,dz] = Blocks.baseBlock
         else             :
-            region[dx - 1,2,dz] = Blocks.repeatMinuxX
+            region[dx - 1,2,dz] = Blocks.repeatMinusX
             region[dx - 1,1,dz] = Blocks.baseBlock
             if(region[dx - 2,2,dz].id == "minecraft:air"):
                 region[dx - 2,2,dz] = Blocks.baseBlock
@@ -86,6 +86,38 @@ class SchemGen:
         for x in range(st,ed - 2):
             region[lane,2,x] = Blocks.baseBlock
             region[lane,3,x] = Blocks.wireBlock
+        offset = 0
+        outStart = conn.outLet[0].wire.lane
+        doRepeat = True
+        while doRepeat:
+            doRepeat = False
+            offset += 1
+            pz = (outStart + offset) * 3
+            nz = (outStart - offset) * 3
+            if(outStart - offset > conn.start):
+                doCollide = False
+                doRepeat = True
+                for cx in conn.inLet:
+                    if(cx.wire.lane == outStart - offset and not cx.inverting):
+                        doCollide = True
+                        break
+                else:
+                    region[lane,3,nz] = Blocks.repeatPlusZ
+                if(doCollide):
+                    region[lane,3,nz + 1] = Blocks.repeatPlusZ
+            if(outStart + offset < conn.end  ):
+                doCollide = False
+                doRepeat = True
+                for cx in conn.inLet:
+                    if(cx.wire.lane == outStart - offset and not cx.inverting):
+                        doCollide = True
+                        break
+                else:
+                    region[lane,3,pz] = Blocks.repeatMinusZ
+                if(doCollide):
+                    region[lane,3,pz - 1] = Blocks.repeatMinusZ
+        ##
+
 
     def _schematicPlaceCross(region,cx,direction):
         conn = cx.conn
