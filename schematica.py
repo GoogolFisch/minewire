@@ -79,6 +79,25 @@ class SchemGen:
         for x in range(st,ed - 2):
             region[x,0,lane] = Blocks.baseBlock
             region[x,1,lane] = Blocks.wireBlock
+        for cx in wire.refs:
+            if(not cx.dirUp):
+                inStart = cx.conn.lane
+                break
+        else:
+            inStart = wire.fixedPoint[1]
+        doRepeat = True
+        offset = 0
+        while doRepeat:
+            doRepeat = False
+            offset += 2
+            pz = (inStart + offset) * 3
+            nz = (inStart - offset) * 3
+            if(inStart - offset > wire.start):
+                doRepeat = True
+                region[nz,1,lane] = Blocks.repeatMinusX
+            if(inStart + offset < wire.end  ):
+                doRepeat = True
+                region[pz,1,lane] = Blocks.repeatPlusX
     def schematicTraceConn(region,conn):
         st = (conn.start  ) * 3
         ed = (conn.end + 1) * 3
@@ -86,12 +105,15 @@ class SchemGen:
         for x in range(st,ed - 2):
             region[lane,2,x] = Blocks.baseBlock
             region[lane,3,x] = Blocks.wireBlock
+        # SchemGen.traceRepeatForConn(region,conn)
+        # def traceRepeatForConn(region,conn):
+        # lane = conn.lane * 3
         offset = 0
         outStart = conn.outLet[0].wire.lane
         doRepeat = True
         while doRepeat:
             doRepeat = False
-            offset += 1
+            offset += 2
             pz = (outStart + offset) * 3
             nz = (outStart - offset) * 3
             if(outStart - offset > conn.start):
@@ -109,7 +131,7 @@ class SchemGen:
                 doCollide = False
                 doRepeat = True
                 for cx in conn.inLet:
-                    if(cx.wire.lane == outStart - offset and not cx.inverting):
+                    if(cx.wire.lane == outStart + offset and not cx.inverting):
                         doCollide = True
                         break
                 else:
@@ -163,7 +185,7 @@ def setupSettings(settings):
 
 def createSchematic(settings,module):
     setupSettings(settings)
-    region = Region(-2,0,-2,100,6,100)
+    region = Region(-2,0,-2,module.dimension[1] * 3 + 9,6,module.dimension[0] * 3 + 9)
     schematic = region.as_schematic(name=settings["Name"],
                                  author=settings["Author"],
                                  description=settings["Description"])

@@ -84,7 +84,8 @@ class Module:
                  "connections",
                  "token","tIn","tOut","tExpr",
                  "functionWires",
-                 "interfaceWire","namedWires")
+                 "interfaceWire","namedWires",
+                 "doneWork", "dimension")
     def __init__(self,dat,tIn,tOut,tExpr):
         self.name  = dat.lst[0].data
         self.lock  = False
@@ -92,15 +93,18 @@ class Module:
         self.tIn   = tIn
         self.tOut  = tOut
         self.tExpr = tExpr
+        self.doneWork      = False
         self.connections   = []
         self.namedWires    = []
         self.interfaceWire = []
         self.functionWires = []
+        self.dimension     = (0,0)
         Module.lookup[self.name] = self
         self._parseWireName()
     def __str__(self):
         return (f"{self.name}:" +
-                f"({",".join([i.data for i in self.interfaceWire])})," +
+                #f"({",".join([i.data for i in self.interfaceWire])})," +
+                f"({",".join([i for i in self.interfaceWire])})," +
                 f"[{'.'.join([str(x) for x in self.connections])}]"
                 )
     def _parseWireName(self):
@@ -108,20 +112,20 @@ class Module:
             self.functionWires.append(wr.data)
             parts = wr.data.split(":")
             if(len(parts) > 1):
-                count = int(parts[-1])
+                count = int(parts[1])
                 for c in range(count):
                     self.interfaceWire.append(f"{parts[0]}:{c}")
             else:
-                self.interfaceWire.append(wr)
+                self.interfaceWire.append(wr.data)
         for wr in self.tOut.lst:
             self.functionWires.append(wr.data)
             parts = wr.data.split(":")
             if(len(parts) > 1):
-                count = int(parts[-1])
+                count = int(parts[1])
                 for c in range(count):
                     self.interfaceWire.append(f"{parts[0]}:{c}")
             else:
-                self.interfaceWire.append(wr)
+                self.interfaceWire.append(wr.data)
         #
     def maybeAddWire(self,nam)->Wire:
         for w in self.namedWires:
@@ -129,8 +133,10 @@ class Module:
                 return w
         wir = Wire(nam)#,len(self.namedWires))
         for ifwToken in self.interfaceWire:
-            if(ifwToken.data == nam):
+            #if(ifwToken.data == nam):
+            if(ifwToken == nam):
                 wir.fixedPoint = (-1,0)
+                print("(2026-08-24T14:18:18)",wir)
         self.namedWires.append(wir)
         return wir
     def parseExpr(self,e)->Wire:
@@ -151,6 +157,7 @@ class Module:
             self.connections.append(c)
             return w
     def parseFunctionList(self):
+        if(self.doneWork):return
         if(self.lock):
             print("There is a recursive dependency!")
         self.lock = True
@@ -166,6 +173,7 @@ class Module:
                 m = Module.lookup[refName]
                 m.parseFunctionList()
                 translation = m.namespaceTranslation(e.lst)
+                print(f"(2026-08-24T14:15:56) {translation}")
                 for conn in m.connections:
                     inLets = []
                     for cx in conn.inLet:
@@ -178,6 +186,7 @@ class Module:
                     self.connections.append(Connection(inLets,outLets))
                 # TODO
         self.optimisation()
+        self.doneWork = True
     def namespaceTranslation(self,nameWire:list(str))->dict:
         if(len(nameWire) != len(self.functionWires)):
             print(f"(2026-08-21T13:00:23) {nameWire} -> "+ 
@@ -206,6 +215,8 @@ class Module:
         #print(translation)
         return translation
     def length(self):
+        dimensionX = 0
+        dimensionZ = 0
         akku = 0
         for w in self.namedWires: w.reset()
         #for w in self.interfaceWire:
@@ -222,6 +233,8 @@ class Module:
                 print("(2026-08-20T19:46:08) low high error")
                 continue
             akku += conn.end - conn.start
+            if(conn.end > dimensionX):
+                dimensionX = conn.end
         for conn in self.connections:
             for c2 in self.connections:
                 if(conn is c2):continue
@@ -236,6 +249,13 @@ class Module:
                 print("(2026-08-20T19:47:23) low high error")
                 continue
             akku += w.end - w.start
+            if(w.end > dimensionZ):
+                dimensionZ = w.end
+            if(w.fixedPoint is not None):
+                print("(2026-08-24T14:14:35)",w,w.fixedPoint)
+            if(w.name.startswith("out")):
+                print("(2026-08-24T14:15:16)",w,w.fixedPoint)
+        self.dimension = (dimensionX,dimensionZ)
         return akku
     def layoutOptimisation(self):
         for i,w in enumerate(self.namedWires): w.lane = i + 1
