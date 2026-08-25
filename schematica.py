@@ -185,7 +185,7 @@ def setupSettings(settings):
 
 def createSchematic(settings,module):
     setupSettings(settings)
-    region = Region(-2,0,-2,module.dimension[1] * 3 + 9,6,module.dimension[0] * 3 + 9)
+    region = Region(0,0,0,module.dimension[1] * 3 + 9,6,module.dimension[0] * 3 + 9)
     schematic = region.as_schematic(name=settings["Name"],
                                  author=settings["Author"],
                                  description=settings["Description"])
