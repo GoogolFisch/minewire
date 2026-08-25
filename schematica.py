@@ -84,6 +84,10 @@ class SchemGen:
                 inStart = cx.conn.lane
                 break
         else:
+            if(wire.fixedPoint is None):
+                print("(2026-08-25T16:25:10)",wire)
+                for ref in wire.refs:
+                    print("-",ref)
             inStart = wire.fixedPoint[1]
         doRepeat = True
         offset = 0
@@ -164,14 +168,18 @@ class SchemGen:
         if(wire.lane > conn.start): dirTyp |= 4
         if(wire.lane < conn.end  ): dirTyp |= 8
         if(dirTyp == 0):print("(2026-08-23T17:00:17) Error")
-        if(dirTyp & 1 and dirTyp & 4):
-            SchemGen._schematicPlaceCross(region,cx,0)
-        elif(dirTyp & 2 and dirTyp & 4):
-            SchemGen._schematicPlaceCross(region,cx,1)
-        elif(dirTyp & 1 and dirTyp & 8):
-            SchemGen._schematicPlaceCross(region,cx,2)
-        elif(dirTyp & 2 and dirTyp & 8):
-            SchemGen._schematicPlaceCross(region,cx,3)
+        if(cx.dirUp):
+            if(dirTyp & 1 and dirTyp & 4):
+                SchemGen._schematicPlaceCross(region,cx,0)
+            elif(dirTyp & 2 and dirTyp & 4):
+                SchemGen._schematicPlaceCross(region,cx,1)
+            elif(dirTyp & 1 and dirTyp & 8):
+                SchemGen._schematicPlaceCross(region,cx,2)
+            elif(dirTyp & 2 and dirTyp & 8):
+                SchemGen._schematicPlaceCross(region,cx,3)
+        else: #dir down
+            if(dirTyp & 1): SchemGen._schematicPlaceCross(region,cx,0)
+            if(dirTyp & 2): SchemGen._schematicPlaceCross(region,cx,1)
 
 def setupSettings(settings):
     joining = {

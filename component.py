@@ -7,7 +7,8 @@ def getRandName():
 def getRandNameSmall():
     return f"-{uuid.uuid4()}"[:9]
 
-LENGTH_MAX = 99999
+LENGTH_MAX = 999_999
+HEAT_SPREAD = 10
 
 class Point:
     # typ = False # False for x dir
@@ -43,6 +44,8 @@ class Wire:
         self.end   = 0
         if(self.fixedPoint is not None):
             self.update(self.fixedPoint[1])
+            if(self.fixedPoint[0] != -1):
+                self.lane = self.fixedPoint[0]
     def update(self,lane):
         self.start = min(lane,self.start)
         self.end   = max(lane,self.end  )
@@ -135,9 +138,10 @@ class Module:
             if(w.name == nam):
                 return w
         wir = Wire(nam)#,len(self.namedWires))
-        for ifwToken in self.interfaceWire:
+        for idx,ifwToken in enumerate(self.interfaceWire):
             #if(ifwToken.data == nam):
             if(ifwToken == nam):
+                #wir.fixedPoint = (int(1 + 1.5 * idx),0)
                 wir.fixedPoint = (-1,0)
         self.namedWires.append(wir)
         return wir
@@ -264,40 +268,111 @@ class Module:
         akku += (dimensionX + dimensionZ) * 3
         return akku
 
-    def layActionMoveCx(self,cx):
+    def _findEffectedWire(self,cx)->list:
+        lst = []
+        for w in self.namedWires:
+            if(w is cx.wire):continue
+            if(w.lane == cx.wire.lane):
+                return []
+            if(w.lane > cx.wire.lane):
+                lst.append(w)
+        return lst
+    def _findEffectedConn(self,cx)->list:
+        lst = []
+        for c in self.namedWires:
+            if(c is cx.conn):continue
+            if(c.lane == cx.conn.lane):
+                return []
+            if(c.lane > cx.conn.lane):
+                lst.append(c)
+        return lst
+    def layActionMoveCx(self,cx,heat):
         baseLength = self.length()
-        movedWire = []
+        movedWire = self._findEffectedConn(cx)
+        movedConn = self._findEffectedWire(cx)
         wireLane = cx.wire.lane
         connLane = cx.conn.lane
         trys = max(wireLane,connLane) * 10
         if(min(wireLane,connLane) < 2):return False
-        for c in range(trys):
+        #
+        for x in range(trys):
+            wl = random.randrange(1,self.dimension[0] + 1)
+            cl = random.randrange(1,self.dimension[1] + 1)
+            cx.wire.lane = wl
+            cx.conn.lane = cl
+            testLength = self.length()
+            if(testLength < baseLength):
+                print("(2026-08-25T14:07:59)",testLength,baseLength,wl,cl)
+                return True
+            if(random.random() < heat * (baseLength - testLength + HEAT_SPREAD)):
+                print("(2026-08-25T14:26:56)++",testLength,baseLength,wl,cl)
+                return True
+        #
+        for w in movedWire:w.lane -= 1
+        for c in movedConn:c.lane -= 1
+        for x in range(trys):
             wl = random.randrange(1,wireLane)
             cl = random.randrange(1,connLane)
             cx.wire.lane = wl
-            cx.conn.lane = wl
+            cx.conn.lane = cl
             testLength = self.length()
             if(testLength < baseLength):
-                print("(2026-08-25T13:33:07)",baseLength,testLength,wl,cl)
+                print("(2026-08-25T13:51:57)",testLength,baseLength,wl,cl)
                 return True
-
+            if(random.random() < heat * (baseLength - testLength + HEAT_SPREAD)):
+                print("(2026-08-25T14:27:15)++",testLength,baseLength,wl,cl)
+                return True
+        for w in movedWire:w.lane += 1
+        for c in movedConn:c.lane += 1
+        #
+        for w in movedWire:w.lane -= 1
+        cx.conn.lane = connLane
+        for x in range(1,self.dimension[0]):
+            cx.wire.lane = x
+            testLength = self.length()
+            if(testLength < baseLength):
+                print("(2026-08-25T13:52:56)",testLength,baseLength,x,connLane)
+                return True
+        for w in movedWire:w.lane += 1
+        #
+        for c in movedConn:c.lane -= 1
+        cx.wire.lane = connLane
+        for x in range(1,self.dimension[1]):
+            cx.conn.lane = x
+            testLength = self.length()
+            if(testLength < baseLength):
+                print("(2026-08-25T13:52:50)",testLength,baseLength,wireLane,x)
+                return True
+        for c in movedConn:c.lane += 1
         cx.wire.lane = wireLane
         cx.conn.lane = connLane
         baseLength2 = self.length()
         if(baseLength != baseLength2):
-            print("(2026-08-25T13:34:17) Length mismatch!")
+            print(f"(2026-08-25T13:34:17) {baseLength=} {baseLength2=}")
         return False
     def layoutOptimisation(self):
-        for i,w in enumerate(self.namedWires): w.lane = i + 1
-        for i,c in enumerate(self.connections): c.lane = i + 1
-        doRepeat = True
+        #lenNw = len(self.namedWires)
+        #lst = list(range(lenNw,lenNw*2))
+        lst = list(range(1,len(self.namedWires) + 1))
+        random.shuffle(lst)
+        for i,w in enumerate(self.namedWires): w.lane = lst[i]
+        lst = list(range(1,len(self.connections) + 1))
+        random.shuffle(lst)
+        for i,c in enumerate(self.connections): c.lane = lst[i]
+
+        doRepeat = 3
         counting = 0
-        while doRepeat:
+        heat = 0.5
+        print(f"{self.length()=}")
+        while doRepeat > 0:
             counting += 1
-            doRepeat = False
+            d = False
             for w in self.namedWires:
                 for cx in w.refs:
-                    doRepeat |= self.layActionMoveCx(cx)
+                    d |= self.layActionMoveCx(cx,heat)
+            if(not d):
+                doRepeat -= 1
+            heat *= 0.5
             print("\b"*9,end=str(counting),flush=True)
 
     def optimisation(self):

@@ -19,18 +19,16 @@ component bit-16-upper-8 (a:16) (b:8) (
 	b:7 = a:15
 )
 
-component xor (a,b) (xo) (
+component xor (a,b) (xo,and) (
 	and =  a& b
 	nnd = ~a&~b
 	xo = ~(and|nnd)
 )
 
 component bit-adder (a,b,carry) (bit-out,carry-out) (
-	st0and = a&b
-	@xor(a,b,  st0xor)
-	st1and = st0xor&carry
+	@xor(a,b,  st0xor,st0and)
 
-	@xor(st0xor,carry,  bit-out)
+	@xor(st0xor,carry,  bit-out,st1and)
 	carry-out = st0and|st1and
 )
 

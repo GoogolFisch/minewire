@@ -1,0 +1,37 @@
+
+component xor (a,b) (xout) (
+	and  =  a& b
+	nnd  = ~a&~b
+	xout = ~(and|nnd)
+)
+component D-latch (clk,d) (sto) (
+	set = clk&d
+	res = clk&~d
+	sto = ~(nto|res)
+	nto = ~(sto|set)
+)
+
+module main (clk) (out) (
+	nclk = ~clk
+	@D-latch(clk,prop:0,nprop:0)
+	@D-latch(clk,prop:1,nprop:1)
+	@D-latch(clk,prop:2,nprop:2)
+	@D-latch(clk,prop:3,nprop:3)
+	@D-latch(clk,prop:4,nprop:4)
+	@D-latch(clk,prop:5,nprop:5)
+	@D-latch(clk,prop:6,nprop:6)
+	@D-latch(clk,prop:7,out)
+
+	@xor(out,nprop:5,lfs:0)
+	@xor(lfs:0,nprop:4,lfs:1)
+	@xor(lfs:1,nprop:3,lfs:2)
+
+	@D-latch(nclk,lfs:2,prop:0)
+	@D-latch(nclk,nprop:0,prop:1)
+	@D-latch(nclk,nprop:1,prop:2)
+	@D-latch(nclk,nprop:2,prop:3)
+	@D-latch(nclk,nprop:3,prop:4)
+	@D-latch(nclk,nprop:4,prop:5)
+	@D-latch(nclk,nprop:5,prop:6)
+	@D-latch(nclk,nprop:6,prop:7)
+)
