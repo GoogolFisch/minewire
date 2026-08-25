@@ -230,6 +230,7 @@ class Module:
         #for w in self.interfaceWire:
         #    w.update(0)
         for conn in self.connections:
+            akku += conn.lane
             conn.reset()
             for cx in conn.inLet:
                 cx.wire.update(conn.lane)
@@ -250,6 +251,7 @@ class Module:
                 if(conn.end >= c2.start and conn.start <= c2.end):
                     akku += LENGTH_MAX
         for w in self.namedWires:
+            akku += w.lane
             for w2 in self.namedWires:
                 if(w is w2):continue
                 if(w.lane != w2.lane):continue
@@ -351,9 +353,9 @@ class Module:
             print(f"(2026-08-25T13:34:17) {baseLength=} {baseLength2=}")
         return False
     def layoutOptimisation(self):
-        #lenNw = len(self.namedWires)
-        #lst = list(range(lenNw,lenNw*2))
-        lst = list(range(1,len(self.namedWires) + 1))
+        lenNw = len(self.namedWires) + 2
+        lst = list(range(lenNw,lenNw*2))
+        #lst = list(range(1,len(self.namedWires) + 1))
         random.shuffle(lst)
         for i,w in enumerate(self.namedWires): w.lane = lst[i]
         lst = list(range(1,len(self.connections) + 1))

@@ -11,8 +11,7 @@ component D-latch (clk,d) (sto) (
 	nto = ~(sto|set)
 )
 
-module main (clk) (out) (
-	nclk = ~clk
+module main (clk,nclk) (out) (
 	@D-latch(clk,prop:0,nprop:0)
 	@D-latch(clk,prop:1,nprop:1)
 	@D-latch(clk,prop:2,nprop:2)
