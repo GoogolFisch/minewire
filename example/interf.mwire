@@ -1,0 +1,21 @@
+
+; ignore this!
+component D-latch (clk,d) (sto) (
+	set = clk&d
+	res = clk&~d
+	sto = ~(nto|res)
+	nto = ~(sto|set)
+)
+
+module 2-1-multiplex (sel,a,b) (out) (
+	posA = a&sel
+	posB = b&~sel
+	out = posA|posB
+)
+module main (sel:4,a:4,b:4,clk) (data:4) (
+	; for comments
+	repeat (N,0,4) (
+		@2-1-multiplex(sel,a:#N,b:#N)(plexed)
+		@D-latch(clk,plexed)(data)
+	)
+)
