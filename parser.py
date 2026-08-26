@@ -77,14 +77,15 @@ class Parser:
         self.tokenList.append(tok)
         return True
 
+    @staticmethod
+    def _isCharOfWord(char) -> bool:
+        return char.isalnum() or char in '@-'
     def tryLexName(self) -> Token:
-        wordChar = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        wordChar += wordChar.lower()
-        wordChar += "0123456789_-"
-        if(self.fileContent[self.index] not in wordChar):
+        wordChar = "-"
+        if(not Parser._isCharOfWord(self.fileContent[self.index])):
             return False
         while(self.index < len(self.fileContent)):
-            if(self.fileContent[self.index] not in wordChar):
+            if(not Parser._isCharOfWord(self.fileContent[self.index])):
                 break
             self.index += 1
             self.column += 1
@@ -100,7 +101,7 @@ class Parser:
         return True
 
     def tryLexSymbol(self) -> Token:
-        symbolChar = ",|&()~"
+        symbolChar = ",|&()~="
         char = self.fileContent[self.index]
         if(char not in symbolChar):
             return False
@@ -108,7 +109,6 @@ class Parser:
         tok = Token(char,char,self)
         self.tokenList.append(tok)
         return True
-
 
     def tokenize(self):
         while self.index < len(self.fileContent):
@@ -120,6 +120,11 @@ class Parser:
             if(self.tryLexNumSeperator()):
                 self.tryLexNumber()
                 continue
+            if(self.tryLexSymbol()):continue
+            if(self.tryLexName()):continue
+            print("(2026-08-26T20:46:22) Char not matching any Symbol! ",
+                  self.fileContent[self.index])
+        print("\n".join([str(x) for x in self.tokenList]))
 
 
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import parser
 from jsonc_parser.parser import JsoncParser
 
 settings = {}
@@ -20,5 +21,7 @@ if __name__ == "__main__":
 
 def main():
     print(settings)
+    p = parser.Parser(settings["input"])
+    p.tokenize()
 
 if __name__ == "__main__":main()
