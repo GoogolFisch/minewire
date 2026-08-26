@@ -64,6 +64,19 @@ class Parser:
             self.column += 1
         return True
 
+    def tryLexNumber(self) -> Token:
+        wordChar = "0123456789_-"
+        if(self.fileContent[self.index] not in wordChar):
+            return False
+        while(self.index < len(self.fileContent)):
+            if(self.fileContent[self.index] not in wordChar):
+                break
+            self.index += 1
+            self.column += 1
+        tok = Token(self.fileContent[self.lastIndex:self.index],"word",self)
+        self.tokenList.append(tok)
+        return True
+
     def tryLexName(self) -> Token:
         wordChar = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         wordChar += wordChar.lower()
@@ -79,6 +92,23 @@ class Parser:
         self.tokenList.append(tok)
         return True
 
+    def tryLexNumSeperator(self) -> Token:
+        if(self.fileContent[self.index] != ":"):return False
+        self.index += 1
+        tok = Token(":",":",self)
+        self.tokenList.append(tok)
+        return True
+
+    def tryLexSymbol(self) -> Token:
+        symbolChar = ",|&()~"
+        char = self.fileContent[self.index]
+        if(char not in symbolChar):
+            return False
+        self.index += 1
+        tok = Token(char,char,self)
+        self.tokenList.append(tok)
+        return True
+
 
     def tokenize(self):
         while self.index < len(self.fileContent):
@@ -87,6 +117,9 @@ class Parser:
             self.lastColumn = self.column
             if(self.tryLexWhiteSpace()):continue
             if(self.tryLexComment   ()):continue
+            if(self.tryLexNumSeperator()):
+                self.tryLexNumber()
+                continue
 
 
 
