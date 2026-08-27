@@ -18,7 +18,7 @@ module 2-1-multiplex (sel,a,b) (out) (
 module main (sel:4,a:4,b:4,clk) (data:4) (
 	; for comments
 	repeat (N,0,4) (
-		@2-1-multiplex(sel,a:N,b:N)(plexed)
-		@D-latch(clk,plexed)(data)
+		@2-1-multiplex(sel,a:N,b:N)(plexed:N)
+		@D-latch(clk,plexed:N)(data:N)
 	)
 )

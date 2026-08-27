@@ -200,6 +200,7 @@ class Parser:
                     tEnding.showWhere()
             )
         tEnding.used = True
+        return True
 
     def parseBiMergeOperand(self,operand,begin=0,upper=-1):
         self.index = begin
@@ -223,6 +224,24 @@ class Parser:
             self.index += 1
             lastToken = t
         #end
+    def parseRepeat(self,token,limit=-1):
+        stepBack = self.index
+        tBRange = self.findNextToken(offset=1,limit=limit)
+        self.tryParseSubExpr(tBRange)
+        self.index = stepBack
+        tRange = self.findNextToken(offset=1,limit=limit)
+        tRange.used = True
+        token.args.append(tRange)
+        #
+        tBLst = self.findNextToken(offset=1,limit=limit)
+        self.tryParseSubExpr(tBLst)
+        stepLimit = self.index
+        self.index = stepBack + 1
+        while self.index < stepLimit:
+            tRep = self.findNextToken(offset=0,limit=stepLimit)
+            if(tRep is None):break
+            tRep.used = True
+            token.lst.append(tRep)
 
     def parseInner(self):
         storeIdx = self.index
@@ -230,7 +249,10 @@ class Parser:
         while self.index < upper:
             t = self.findNextToken(limit=upper)
             if(t is None):break
-            if(self.tryParseSubExpr(t)):pass
+            elif(t.typ == "word" and t.data == "repeat"):
+                self.parseRepeat(t,limit=upper)
+            elif(t.typ == '('):
+                 self.tryParseSubExpr(t,limit=upper)
             if(t.typ == ')'):
                 upper = self.index
                 break
