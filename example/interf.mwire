@@ -1,5 +1,8 @@
 
 ; ignore this!
+
+; import everything here is as one thing!
+
 component D-latch (clk,d) (sto) (
 	set = clk&d
 	res = clk&~d
@@ -15,7 +18,7 @@ module 2-1-multiplex (sel,a,b) (out) (
 module main (sel:4,a:4,b:4,clk) (data:4) (
 	; for comments
 	repeat (N,0,4) (
-		@2-1-multiplex(sel,a:#N,b:#N)(plexed)
+		@2-1-multiplex(sel,a:N,b:N)(plexed)
 		@D-latch(clk,plexed)(data)
 	)
 )

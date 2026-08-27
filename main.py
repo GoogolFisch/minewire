@@ -23,5 +23,6 @@ def main():
     print(settings)
     p = parser.Parser(settings["input"])
     p.tokenize()
+    p.parsing()
 
 if __name__ == "__main__":main()
