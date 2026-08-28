@@ -34,9 +34,42 @@ class Cost:
     def __add__(self,other):
         return Cost(self.length + other.length,self.errors + other.errors)
 
-class Wire:pass
-class Via :pass
-class Lane:pass
-class Connection:pass
+class Via :
+    __slots__ = ("wire","lane","start","end",
+                 "wireIn","wiresOut","name")
+    def __init__(self,name):
+        self.name  = name
+        self.wire  = 0
+        self.lane  = 0
+        self.start = 0
+        self.end   = 0
+        self.wireIn   = None
+        self.wiresOut = []
+
+class Connection:
+    __slots__ = ("viaO","laneO","dirUp","invert")
+    def __init__(self,via,lane,dirUp=True,invert=False):
+        self.viaO   = via
+        self.laneO  = lane
+        self.dirUp  = dirUp
+        self.invert = invert
+
+class Wire:
+    __slots__ = ("layer","viaO","start","end",
+                 "inLet","outLets")
+    def __init__(self,via):
+        self.viaO    = via
+        self.layer   = 0
+        self.inLet   = None
+        self.outLets = []
+
+class Lane:
+    __slots__ = ("layer","lane","start","end",
+                 "inLets","outLet")
+    def __init__(self):
+        self.layer  = 0
+        self.lane   = 0
+        self.inLets = []
+        self.outLet = None
 
 class Module
