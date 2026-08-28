@@ -2,6 +2,7 @@
 
 import sys
 import parser
+import component
 from jsonc_parser.parser import JsoncParser
 
 settings = {}

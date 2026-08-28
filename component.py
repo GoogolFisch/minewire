@@ -34,10 +34,13 @@ class Cost:
     def __add__(self,other):
         return Cost(self.length + other.length,self.errors + other.errors)
 
+
 class Via :
     __slots__ = ("wire","lane","start","end",
+                 "token",
                  "wireIn","wiresOut","name")
-    def __init__(self,name):
+    def __init__(self,token,name):
+        self.token = token
         self.name  = name
         self.wire  = 0
         self.lane  = 0
@@ -46,13 +49,21 @@ class Via :
         self.wireIn   = None
         self.wiresOut = []
 
+    def __str__(self):
+        return f"<Via:{self.name}>"
+
+
 class Connection:
-    __slots__ = ("viaO","laneO","dirUp","invert")
-    def __init__(self,via,lane,dirUp=True,invert=False):
+    __slots__ = ("token","viaO","laneO","dirUp","invert")
+    def __init__(self,token,via,lane,dirUp=True,invert=False):
+        self.token  = token
         self.viaO   = via
         self.laneO  = lane
         self.dirUp  = dirUp
         self.invert = invert
+
+    def __str__(self):
+        return f"<Connection:{self.viaO.name}-{self.laneO}>"
 
 class Wire:
     __slots__ = ("layer","viaO","start","end",
@@ -63,6 +74,9 @@ class Wire:
         self.inLet   = None
         self.outLets = []
 
+    def __str__(self):
+        return f"<Wire:{self.viaO.name}-{self.layer}>"
+
 class Lane:
     __slots__ = ("layer","lane","start","end",
                  "inLets","outLet")
@@ -72,4 +86,14 @@ class Lane:
         self.inLets = []
         self.outLet = None
 
-class Module
+    def __str__(self):
+        return f"<Lane:{self.lane}-{self.layer}"
+
+class Module:
+    lookup = dict()
+    __slots__ = ("name")
+    def __init__(self,name,token):
+        Module.lookup[name] = self
+        self.name = name
+
+

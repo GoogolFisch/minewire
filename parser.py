@@ -198,7 +198,7 @@ class Parser:
         self.parseInner()
         tEnding = self.findNextToken(limit=limit)
         if(tEnding is None):
-            print(f"(2026-08-27T14:35:04) end of\n{token.showWhere()}\nreached...")
+            print(f"(2026-08-27T14:35:04) EOF, couldn't finish\n{token.showWhere()}\nreached...")
             return
         if(tEnding.typ != ')'):
             print(
@@ -363,6 +363,7 @@ class Parser:
             elif(t.typ == "word" and t.data == "set"):
                 self.parseSet(t)
             self.index += 1
+        return
         for x in self.tokenList:
             if(x.used):continue
             print(x.showWhere())
