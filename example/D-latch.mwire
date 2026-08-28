@@ -1,9 +1,9 @@
 
 component D-latch (clk,d) (sto) (
-	set = clk&d
-	res = clk&~d
-	sto = ~(nto|res)
-	nto = ~(sto|set)
+	setHigh = clk&d
+	setLow  = clk&~d
+	sto = ~(nto|setHigh)
+	nto = ~(sto|setLow )
 )
 
 module 2-1-multiplex (sel,a,b) (out) (
