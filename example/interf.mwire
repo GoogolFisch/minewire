@@ -3,11 +3,13 @@
 
 ; import everything here is as one thing!
 
+set (WORD_SIZE = 4)
+
 component D-latch (clk,d) (sto) (
-	set = clk&d
-	res = clk&~d
-	sto = ~(nto|res)
-	nto = ~(sto|set)
+	enable  = clk&d
+	disable = clk&~d
+	sto = ~(nto|enable )
+	nto = ~(sto|disable)
 )
 
 module 2-1-multiplex (sel,a,b) (out) (
@@ -17,7 +19,7 @@ module 2-1-multiplex (sel,a,b) (out) (
 )
 module main (sel:4,a:4,b:4,clk) (data:4) (
 	; for comments
-	repeat (N,0,4) (
+	repeat (N,0,WORD_SIZE) (
 		@2-1-multiplex(sel,a:N,b:N)(plexed:N)
 		@D-latch(clk,plexed:N)(data:N)
 	)

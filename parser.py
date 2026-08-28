@@ -18,6 +18,12 @@ class Token:
         self.used    = False
         self.invert  = False
 
+    def update(self,token):
+        if(token.tStart < self.tStart):
+            self.tStart = token.tStart
+        if(token.tEnd > self.tEnd):
+            self.tEnd = token.tEnd
+
     def __str__(self):
         dat = self.data
         if(self.invert):dat = "~" + dat
@@ -115,7 +121,7 @@ class Parser:
 
     @staticmethod
     def _isCharOfWord(char) -> bool:
-        return char.isalnum() or char in '-'
+        return char.isalnum() or char in '-_'
 
     def tryLexName(self) -> Token:
         if(not Parser._isCharOfWord(self.fileContent[self.index])):
@@ -210,26 +216,32 @@ class Parser:
             if(t is None):break
             if(t.typ == operand and len(t.lst) == 0):
                 if(lastToken.typ == operand):
+                    lastToken.update(t)
                     t.used = True
                     t = lastToken
                 else:
                     t.lst.append(lastToken)
+                    t.update(lastToken)
                     lastToken.used = True
                 tNext = self.findNextToken(offset=1,limit=upper)
                 if(tNext is None):
                     print("(2026-08-27T15:22:47) Error, expected next token!\n",
                           t.showWhere())
                 t.lst.append(tNext)
+                t.update(tNext)
                 tNext.used = True
             self.index += 1
             lastToken = t
         #end
+
     def parseRepeat(self,token,limit=-1):
+        if(len(token.lst) != 0):return
         stepBack = self.index
         tBRange = self.findNextToken(offset=1,limit=limit)
         self.tryParseSubExpr(tBRange)
         self.index = stepBack
         tRange = self.findNextToken(offset=1,limit=limit)
+        token.update(tRange)
         tRange.used = True
         token.args.append(tRange)
         #
@@ -240,8 +252,20 @@ class Parser:
         while self.index < stepLimit:
             tRep = self.findNextToken(offset=0,limit=stepLimit)
             if(tRep is None):break
+            token.update(tRep)
             tRep.used = True
             token.lst.append(tRep)
+
+    def parseSet(self,token,limit=-1):
+        if(len(token.lst) != 0):return
+        stepBack = self.index
+        tBegin = self.findNextToken(offset=1,limit=limit)
+        self.tryParseSubExpr(tBegin)
+        self.index = stepBack
+        tAssign = self.findNextToken(offset=1,limit=limit)
+        token.update(tAssign)
+        tAssign.used = True
+        token.lst.append(Token.ensureInLst(tAssign))
 
     def parseInner(self):
         storeIdx = self.index
@@ -251,6 +275,8 @@ class Parser:
             if(t is None):break
             elif(t.typ == "word" and t.data == "repeat"):
                 self.parseRepeat(t,limit=upper)
+            elif(t.typ == "word" and t.data == "set"):
+                self.parseSet(t,limit=upper)
             elif(t.typ == '('):
                  self.tryParseSubExpr(t,limit=upper)
             if(t.typ == ')'):
@@ -266,6 +292,7 @@ class Parser:
             if(t.typ == '~'):
                 t.used = True
                 tInvert = self.findNextToken(offset=1,limit=upper)
+                tInvert.update(t)
                 tInvert.invert = not tInvert.invert
             self.index += 1
         self.parseBiMergeOperand("&",storeIdx,upper)
@@ -278,14 +305,17 @@ class Parser:
             if(t is None):break
             if(t.typ == '@' and len(t.args) == 0):
                 tName = self.findNextToken(offset=1,limit=upper)
+                t.update(tName)
                 tName.used = True
                 t.args.append(tName)
                 #
                 tIntoWire = self.findNextToken(offset=1,limit=upper)
+                t.update(tIntoWire)
                 tIntoWire.used = True
                 t.args.append(Token.ensureInLst(tIntoWire))
                 #
                 tOutOfWire = self.findNextToken(offset=1,limit=upper)
+                t.update(tOutOfWire)
                 tOutOfWire.used = True
                 t.args.append(Token.ensureInLst(tOutOfWire))
             self.index += 1
@@ -325,14 +355,14 @@ class Parser:
         while self.index < len(self.tokenList):
             t = self.findNextToken()
             if(t is None):break
-            if(t.data == "import"):
+            elif(t.data == "import"):
                 tName = self.findNextToken(offset=1)
                 child = Parser(tName.data)
-            if(t.data == "component" or t.data == "module"):
+            elif(t.data == "component" or t.data == "module"):
                 self.parseModule(t)
+            elif(t.typ == "word" and t.data == "set"):
+                self.parseSet(t)
             self.index += 1
         for x in self.tokenList:
             if(x.used):continue
             print(x.showWhere())
-
-
