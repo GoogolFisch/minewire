@@ -2,6 +2,9 @@
 import random
 import uuid
 
+LENGTH_MAX = 999_999
+HEAT_SPREAD = 10
+
 def getRandName():
     return f"-{uuid.uuid4()}"
 def getRandNameSmall():
@@ -49,6 +52,13 @@ class Via :
         self.wireIn   = None
         self.wiresOut = []
 
+    def reset(self):
+        self.start = LENGTH_MAX
+        self.end   = 0
+
+    def update(self,connection):
+        pass
+
     def __str__(self):
         return f"<Via:{self.name}>"
 
@@ -74,6 +84,13 @@ class Wire:
         self.inLet   = None
         self.outLets = []
 
+    def reset(self):
+        self.start = LENGTH_MAX
+        self.end   = 0
+
+    def update(self,connection):
+        pass
+
     def __str__(self):
         return f"<Wire:{self.viaO.name}-{self.layer}>"
 
@@ -85,6 +102,13 @@ class Lane:
         self.lane   = 0
         self.inLets = []
         self.outLet = None
+
+    def reset(self):
+        self.start = LENGTH_MAX
+        self.end   = 0
+
+    def update(self,connection):
+        pass
 
     def __str__(self):
         return f"<Lane:{self.lane}-{self.layer}"
