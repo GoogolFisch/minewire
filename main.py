@@ -2,7 +2,7 @@
 
 import sys
 import parser
-import component
+import module
 from jsonc_parser.parser import JsoncParser
 
 settings = {}
@@ -25,5 +25,6 @@ def main():
     p = parser.Parser(settings["input"])
     p.tokenize()
     p.parsing()
+    p.debugPrint()
 
 if __name__ == "__main__":main()

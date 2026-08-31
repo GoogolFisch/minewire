@@ -363,7 +363,8 @@ class Parser:
             elif(t.typ == "word" and t.data == "set"):
                 self.parseSet(t)
             self.index += 1
-        return
+
+    def debugPrint(self):
         for x in self.tokenList:
             if(x.used):continue
             print(x.showWhere())
