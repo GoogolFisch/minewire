@@ -143,12 +143,18 @@ class Module:
     def parseWireSet(self,token,remap:dict) -> Wire:
         baseWir = self.maybeAddWire(token.lst[0].data)
         gotWire = self.parseToken(token.lst[1],remap)
+        """
         for oLed in gotWire.outLets:
             baseWir.addOutOf(oLed)
             oLed.wire = baseWir
         baseWir.addInto(gotWire.inLet)
         gotWire.inLet.wire = baseWir
         self.wires.remove(gotWire)
+        """
+        lan = Lane()
+        lan.addInto(Connection(token,gotWire,lan))
+        lan.addOutOf(Connection(token,baseWir,lan,False))
+        self.lanes.append(lan)
         return baseWir
 
     def parseRepeat(self,token,remap:dict) -> None:
