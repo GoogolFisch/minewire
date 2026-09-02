@@ -163,6 +163,9 @@ class Parser:
             if(self.tryLexWhiteSpace()):continue
             if(self.tryLexComment   ()):continue
             if(self.tryLexNumSeperator()):
+                self.lastIndex  = self.index
+                self.lastLine   = self.line
+                self.lastColumn = self.column
                 if(not self.tryLexName()):
                     print("(2026-08-27T10:28:44) Error! " +
                           "after numSeperator was a wrong thing")
@@ -329,14 +332,17 @@ class Parser:
         tBArgs = self.index
         self.tryParseSubExpr(self.findNextToken(offset=1))
         self.index = tBArgs
-        tArgsIn = Token.ensureInLst(self.findNextToken())
-        tArgsIn.used = True
+        foundTok = self.findNextToken()
+        foundTok.used = True
+        tArgsIn = Token.ensureInLst(foundTok)
         t.args.append(tArgsIn)
         #
         tBArgs = self.index
         self.tryParseSubExpr(self.findNextToken(offset=1))
         self.index = tBArgs
-        tArgsOut = Token.ensureInLst(self.findNextToken())
+        foundTok = self.findNextToken()
+        foundTok.used = True
+        tArgsOut = Token.ensureInLst(foundTok)
         tArgsOut.used = True
         t.args.append(tArgsOut)
         #
