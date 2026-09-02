@@ -26,7 +26,7 @@ def main():
     p.tokenize()
     p.parsing()
     topLevel = p.getActiveList()
-    p.debugPrint()
+    #p.debugPrint()
     module.executeTokenList(topLevel)
     mainMod = module.Module.lookup["main"]
     mainMod.generate()

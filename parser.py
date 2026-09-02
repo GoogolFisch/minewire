@@ -1,4 +1,6 @@
 
+def __PrintError(*d,**da):print(*d,**da)
+
 class Token:
     __slots__ = ("typ","data","invert","used",
                  "args","lst",
@@ -167,7 +169,7 @@ class Parser:
                 self.lastLine   = self.line
                 self.lastColumn = self.column
                 if(not self.tryLexName()):
-                    print("(2026-08-27T10:28:44) Error! " +
+                    __PrintError("(2026-08-27T10:28:44) Error! " +
                           "after numSeperator was a wrong thing")
                 continue
             if(self.tryLexSymbol()):continue
@@ -180,7 +182,7 @@ class Parser:
                     self.tryLexTillEOL()
                     continue
                 continue
-            print("(2026-08-26T20:46:22) Char not matching any Symbol! ",
+            __PrintError("(2026-08-26T20:46:22) Char not matching any Symbol! ",
                   self.fileContent[self.index])
         #print("\n".join([str(x) for x in self.tokenList]))
 
@@ -201,10 +203,10 @@ class Parser:
         self.parseInner()
         tEnding = self.findNextToken(limit=limit)
         if(tEnding is None):
-            print(f"(2026-08-27T14:35:04) EOF, couldn't finish\n{token.showWhere()}\nreached...")
+            __PrintError(f"(2026-08-27T14:35:04) EOF, couldn't finish\n{token.showWhere()}\nreached...")
             return
         if(tEnding.typ != ')'):
-            print(
+            __PrintError(
                     "(2026-08-27T13:05:08) Expected \")\", but found\n",
                     tEnding.showWhere()
             )
@@ -228,7 +230,7 @@ class Parser:
                     lastToken.used = True
                 tNext = self.findNextToken(offset=1,limit=upper)
                 if(tNext is None):
-                    print("(2026-08-27T15:22:47) Error, expected next token!\n",
+                    __PrintError("(2026-08-27T15:22:47) Error, expected next token!\n",
                           t.showWhere())
                 t.lst.append(tNext)
                 t.update(tNext)
