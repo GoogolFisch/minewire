@@ -312,12 +312,12 @@ class Parser:
                 tIntoWire = self.findNextToken(offset=1,limit=upper)
                 t.update(tIntoWire)
                 tIntoWire.used = True
-                t.args.append(Token.ensureInLst(tIntoWire))
+                t.lst.append(Token.ensureInLst(tIntoWire))
                 #
                 tOutOfWire = self.findNextToken(offset=1,limit=upper)
                 t.update(tOutOfWire)
                 tOutOfWire.used = True
-                t.args.append(Token.ensureInLst(tOutOfWire))
+                t.lst.append(Token.ensureInLst(tOutOfWire))
             self.index += 1
         #self.index = upper
 
@@ -368,3 +368,12 @@ class Parser:
         for x in self.tokenList:
             if(x.used):continue
             print(x.showWhere())
+
+    def getActiveList(self) -> list(Token):
+        lst = []
+        for x in self.tokenList:
+            if(x.used):continue
+            lst.append(x)
+        return lst
+
+

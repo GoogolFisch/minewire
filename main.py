@@ -25,6 +25,11 @@ def main():
     p = parser.Parser(settings["input"])
     p.tokenize()
     p.parsing()
+    topLevel = p.getActiveList()
     p.debugPrint()
+    module.executeTokenList(topLevel)
+    mainMod = module.Module.lookup["main"]
+    mainMod.generate()
+    print(mainMod)
 
 if __name__ == "__main__":main()
