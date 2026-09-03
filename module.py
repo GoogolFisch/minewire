@@ -27,6 +27,33 @@ class Connection:
         self.dirLane = dirLane
         self.invert  = invert
 
+    def delete(self) -> Connection:
+        if(self.dirLane):
+            # MAY REMOVE TRY
+            try:
+                self.wire.outLets.remove(self)
+                self.lane.inLets.remove(self)
+            except Exception as e:
+                __PrintError(e)
+                __PrintError(self.wire)
+                __PrintError(self.lane)
+                __PrintError(self.token.showWhere())
+                raise e
+        else:
+            if(self.wire. inLet is self):self.wire. inLet = None
+            if(self.lane.outLet is self):self.lane.outLet = None
+        return self
+
+    def insert(self,debug=False):
+        if(self.dirLane):
+            if(self not in self.wire.outLets):
+                self.wire.outLets.append(self)
+            if(self not in self.lane.inLets ):
+                self.lane.inLets .append(self)
+        else:
+            self.wire.inLet  = self
+            self.lane.outLet = self
+
     def __str__(self):
         dat = f"<Connection:{' ~'[self.invert]}{"wl"[self.dirLane]} {self.wire.name}>"
         return dat
@@ -40,25 +67,25 @@ class Wire:
         self.outLets = []
         self.isIO = False
 
-    def addInto(self,let):
+    def addInto(self,let:Connection):
         self.inLet = let
 
-    def addOutOf(self,let):
+    def addOutOf(self,let:Connection):
         self.outLets.append(let)
 
     def __str__(self):
         return f"<Wire:{self.name}>"
 
 class Lane:
-    __slots__ = ("inLets","outLet")
-    def __init__(self):
+    __slots__ = ("inLets","token","outLet")
+    def __init__(self,token):
         self.inLets = []
         self.outLet = None
 
-    def addInto(self,let):
+    def addInto(self,let:Connection):
         self.inLets.append(let)
 
-    def addOutOf(self,let):
+    def addOutOf(self,let:Connection):
         self.outLet = let
 
     def __str__(self):
@@ -164,7 +191,7 @@ class Module:
             return self.parseSubModule(token,remap)
 
     def parseOperationLane(self,token,remap:dict) -> Wire:
-        lan = Lane()
+        lan = Lane(token)
         inverting = token.typ == "&"
         self.lanes.append(lan)
         outWire = self.maybeAddWire(getRandName())
@@ -172,14 +199,12 @@ class Module:
             fetchWire = self.parseToken(subToken,remap)
             subInvert = inverting != subToken.invert
             let = Connection(subToken,fetchWire,lan,True,subInvert)
-            fetchWire.addOutOf(let)
-            lan.addInto(let)
+            let.insert()
             self.cross.append(let)
         #
         subInvert = inverting != token.invert
         let = Connection(token,outWire,lan,False,subInvert)
-        outWire.addInto(let)
-        lan.addOutOf(let)
+        let.insert()
         self.cross.append(let)
         return outWire
 
@@ -194,10 +219,16 @@ class Module:
         gotWire.inLet.wire = baseWir
         self.wires.remove(gotWire)
         """
-        lan = Lane()
-        lan.addInto(Connection(token,gotWire,lan))
-        lan.addOutOf(Connection(token,baseWir,lan,False))
+        lan = Lane(token)
         self.lanes.append(lan)
+        self.wires.append(baseWir)
+        #
+        cx = Connection(token,gotWire,lan)
+        self.cross.append(cx)
+        cx.insert(True)
+        cx = Connection(token,baseWir,lan,False)
+        self.cross.append(cx)
+        cx.insert(True)
         return baseWir
 
     def parseRepeat(self,token,remap:dict) -> None:
@@ -228,21 +259,18 @@ class Module:
         mapping = oMod.createTranslation(token,remap,token.lst[0].lst,token.lst[1].lst)
         #"""
         for oLan in oMod.lanes:
-            mLan = Lane()
+            mLan = Lane(token)
             self.lanes.append(mLan)
             for cx in oLan.inLets:
                 cWire = self.maybeAddWire(mapping[cx.wire.name])
                 let = Connection(cx.token,cWire,mLan,cx.dirLane,cx.invert)
                 self.cross.append(let)
-                #inLets.append(CrossLet(cWire,cx.dirUp,cx.inverting))
-                mLan.addInto(let)
-                cWire.addOutOf(let)
+                let.insert()
             cx = oLan.outLet
             cWire = self.maybeAddWire(mapping[cx.wire.name])
             let = Connection(cx.token,cWire,mLan,cx.dirLane,cx.invert)
             self.cross.append(let)
-            mLan.addOutOf(let)
-            cWire.addInto(let)
+            let.insert()
             #outLet.append(CrossLet(cWire,cx.dirUp,cx.inverting))
             #self.connections.append(Connection(inLets,outLet))
         #"""
@@ -287,10 +315,42 @@ class Module:
                 translation[wir.name] = f"{wir.name}@{self.name}{getRandNameSmall()}"
         return translation
 
-    def reduceConnections(self):
+    def reduceConnections(self) -> bool:
+        didChange = False
         for lan in self.lanes:
+            #if(lan.isIO):continue
+            if(len(lan.inLets) == 0):
+                raise Exception(f"{lan.token.showWhere()}")
             if(len(lan.inLets) == 1):
-                pass
+                if(not lan.inLets[0].wire.isIO):
+                    didChange = True
+                    owir = lan.inLets[0].wire
+                    owir.inLet.wire = lan.outLet.wire
+                    #owir.inLet.wire.inLet = owir.inLet
+                    self.cross.remove(lan.inLets[0].delete())
+                    self.cross.remove(lan.outLet.delete())
+                    self.lanes.remove(lan)
+                    self.wires.remove(owir)
+                elif(not lan.outLet   .wire.isIO):
+                    didChange = True
+                    owir = lan.outLet.wire
+                    for cx in owir.outLets:
+                        cx.wire = lan.inLets[0].wire
+                        cx.wire.outLets.append(cx)
+                    self.cross.remove(lan.inLets[0].delete())
+                    self.cross.remove(lan.outLet.delete())
+                    self.lanes.remove(lan)
+                    self.wires.remove(owir)
+            for lan2 in self.lanes:
+                if(lan is lan2):continue
+                usedWires = lan2.inLets.copy()
+                for w in lan.inLets:
+                    if(w not in usedWires):
+                        usedWires = None
+                        break
+                    usedWires.remove(w)
+                if(usedWires is None or len(usedWires) > 0):
+                    continue
 
     def __str__(self):
         dat = f"<Module: {self.name}\n"

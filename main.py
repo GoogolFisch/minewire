@@ -30,6 +30,7 @@ def main():
     module.executeTokenList(topLevel)
     mainMod = module.Module.lookup["main"]
     mainMod.generate()
+    mainMod.reduceConnections()
     print(mainMod)
 
 if __name__ == "__main__":main()
