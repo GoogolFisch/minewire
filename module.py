@@ -32,12 +32,13 @@ class Connection:
         return dat
 
 class Wire:
-    __slots__ = ("layer","name",
+    __slots__ = ("layer","name","isIO",
                  "inLet","outLets")
     def __init__(self,name):
         self.name    = name
         self.inLet   = None
         self.outLets = []
+        self.isIO = False
 
     def addInto(self,let):
         self.inLet = let
@@ -66,6 +67,7 @@ class Lane:
 class Module:
     lookup = dict()
     __slots__ = ("name","token","wires","lanes","cross",
+                 "inputWires","outputWires","inputName","outputName",
                  "remap","isGenerating","hasGenerated")
     def __init__(self,name,token,remap = {}):
         Module.lookup[name] = self
@@ -77,6 +79,10 @@ class Module:
         self.isGenerating = False
         self.hasGenerated = False
         self.remap = remap
+        self.inputWires  = []
+        self.outputWires = []
+        self.inputName   = []
+        self.outputName  = []
 
     def findWireByName(self,nam) -> Wire:
         for w in self.wires:
@@ -92,12 +98,46 @@ class Module:
         self.wires.append(wir)
         return wir
 
+    def setupIOWire(self,remap:dict):
+        for tok in self.token.args[1].lst:
+            name = tok.getWireName(remap)
+            self.inputName.append(name)
+            if(tok.data == ":"):
+                splt = name.split(":")
+                cnt = int(splt[-1])
+                nam = ":".join(splt[:-1])
+                for c in range(cnt):
+                    wir = self.maybeAddWire(f"{nam}:{c}")
+                    wir.isIO = True
+                    self.inputWires.append(wir)
+            else:
+                wir = self.maybeAddWire(name)
+                wir.isIO = True
+                self.inputWires.append(wir)
+        for tok in self.token.args[2].lst:
+            name = tok.getWireName(remap)
+            self.outputName.append(name)
+            if(tok.data == ":"):
+                splt = name.split(":")
+                cnt = int(splt[-1])
+                nam = ":".join(splt[:-1])
+                for c in range(cnt):
+                    wir = self.maybeAddWire(f"{nam}:{c}")
+                    wir.isIO = True
+                    self.outputWires.append(wir)
+            else:
+                wir = self.maybeAddWire(name)
+                wir.isIO = True
+                self.outputWires.append(wir)
+    # def setupIOWire
+
     def generate(self,callee=None):
         if(self.hasGenerated):return
         if(self.isGenerating):
             if(callee is not None):
                 __PrintError(callee.token.showWhere())
             raise Exception(f"cyclic Dependency! for \n{self.token.showWhere()}")
+        self.setupIOWire(self.remap)
         self.isGenerating = True
         for tok in self.token.lst:
             self.parseToken(tok,self.remap)
@@ -108,11 +148,14 @@ class Module:
             return parseAssignSet(token,remap)
         if(token.typ == "word" and token.data == "repeat"):
             return self.parseRepeat(token,remap)
-        if(token.typ == "word"):
+        if(token.isWire()):
+            return self.maybeAddWire(token.getWireName(remap))
+        """if(token.typ == "word"):
             return self.maybeAddWire(remap.get(token.data,token.data))
         if(token.typ == ":"):
             wName = ":".join([remap.get(x.data,x.data) for x in token.lst])
             return self.maybeAddWire(wName)
+        """
         if(token.typ == "="):
             return self.parseWireSet(token,remap)
         if(token.typ == "&" or token.typ == "|"):
@@ -141,7 +184,7 @@ class Module:
         return outWire
 
     def parseWireSet(self,token,remap:dict) -> Wire:
-        baseWir = self.maybeAddWire(token.lst[0].data)
+        baseWir = self.maybeAddWire(token.lst[0].getWireName(remap))
         gotWire = self.parseToken(token.lst[1],remap)
         """
         for oLed in gotWire.outLets:
@@ -171,7 +214,7 @@ class Module:
             __PrintError(e)
             raise Exception(f"Error with {token.showWhere()}")
         for count in range(varStart,varStop):
-            remap[varName] = count
+            remap[varName] = str(count)
             for subToken in token.lst:
                 self.parseToken(subToken,remap)
         return None
@@ -182,7 +225,7 @@ class Module:
             __PrintError(self.token.showWhere())
             raise Exception(f"Not found module of name {token.args[0].data}")
         oMod.generate(self)
-        mapping = oMod.createTranslation(token,token.lst[0].lst,token.lst[1].lst)
+        mapping = oMod.createTranslation(token,remap,token.lst[0].lst,token.lst[1].lst)
         #"""
         for oLan in oMod.lanes:
             mLan = Lane()
@@ -205,24 +248,34 @@ class Module:
         #"""
         return None
 
-    def createTranslation(self,token,inWire,outWire):
-        if(len(inWire) != len(self.token.args[1].lst)):
+    def createTranslation(self,token,remap,inWire,outWire):
+        if(len(inWire) != len(self.inputName)):
             raise Exception("Not the same input ammount as in definition\n" + 
                             f"{self}\n{token.showWhere()}")
-        if(len(outWire) != len(self.token.args[2].lst)):
+        if(len(outWire) != len(self.outputName)):
             raise Exception("Not the same output ammount as in definition\n" + 
                             f"{self}\n{token.showWhere()}")
         translation = {}
-        for toWire,tokenW in zip(inWire,self.token.args[1].lst):
-            if(tokenW.typ == ":"):
-                pass
+        for toWire,nameWire in zip(inWire,self.inputName):
+            if(":" in nameWire):
+                # TODO
+                splt = nameWire.split(":")
+                count = int(splt[-1])
+                prefix = ":".join(splt[:-1])
+                for c in range(count):
+                    translation[f"{prefix}:{c}"] = f"{toWire.getWireName(remap)}:{c}"
             else:
-                translation[tokenW.data] = toWire.data
-        for toWire,tokenW in zip(outWire,self.token.args[2].lst):
-            if(tokenW.typ == ":"):
-                pass
+                translation[nameWire] = toWire.getWireName(remap)
+        for toWire,nameWire in zip(outWire,self.outputName):
+            if(":" in nameWire):
+                # TODO
+                splt = nameWire.split(":")
+                count = int(splt[-1])
+                prefix = ":".join(splt[:-1])
+                for c in range(count):
+                    translation[f"{prefix}:{c}"] = f"{toWire.getWireName(remap)}:{c}"
             else:
-                translation[tokenW.data] = toWire.data
+                translation[nameWire] = toWire.getWireName(remap)
         # hidden wires
         for wir in self.wires:
             if(wir.name not in translation):
@@ -233,6 +286,11 @@ class Module:
                 #translation[wir.name] = f"{self.name}@{wir.name}{getRandNameSmall()}"
                 translation[wir.name] = f"{wir.name}@{self.name}{getRandNameSmall()}"
         return translation
+
+    def reduceConnections(self):
+        for lan in self.lanes:
+            if(len(lan.inLets) == 1):
+                pass
 
     def __str__(self):
         dat = f"<Module: {self.name}\n"

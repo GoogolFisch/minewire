@@ -40,10 +40,11 @@ class Token:
         if(self.typ == ":"):return True
         return False
 
-    def getWireName(self) -> str:
+    def getWireName(self,remap) -> str:
         if(self.typ == ':'):
-            return ':'.join([x.getWireName() for x in self.lst])
-        return self.data
+            return ':'.join([remap.get(x.getWireName(remap),x.getWireName(remap))
+                             for x in self.lst])
+        return remap.get(self.data,self.data)
 
     def getCount(self) -> int:
         if(self.typ != ':'):return 1
