@@ -5,7 +5,8 @@ import uuid
 LENGTH_MAX = 999_999
 HEAT_SPREAD = 10
 
-def __PrintError(*d,**da):print(*d,**da)
+def __PrintError  (*d,**da):print("\e[0;31m",*d,"\e[0m",**da)
+def __PrintWarning(*d,**da):print("\e[0;33m",*d,"\e[0m",**da)
 
 def getRandName():
     return f"-{uuid.uuid4()}"
@@ -59,9 +60,10 @@ class Connection:
         return dat
 
 class Wire:
-    __slots__ = ("layer","name","isIO",
+    __slots__ = ("layer","name","isIO","token",
                  "inLet","outLets")
-    def __init__(self,name):
+    def __init__(self,name,token):
+        self.token   = token
         self.name    = name
         self.inLet   = None
         self.outLets = []
@@ -117,11 +119,11 @@ class Module:
                 return w
         return None
 
-    def maybeAddWire(self,nam) -> Wire:
+    def maybeAddWire(self,nam,token) -> Wire:
         wir = self.findWireByName(nam)
         if(wir is not None):
             return wir
-        wir = Wire(nam)
+        wir = Wire(nam,token)
         self.wires.append(wir)
         return wir
 
@@ -134,11 +136,11 @@ class Module:
                 cnt = int(splt[-1])
                 nam = ":".join(splt[:-1])
                 for c in range(cnt):
-                    wir = self.maybeAddWire(f"{nam}:{c}")
+                    wir = self.maybeAddWire(f"{nam}:{c}",tok)
                     wir.isIO = True
                     self.inputWires.append(wir)
             else:
-                wir = self.maybeAddWire(name)
+                wir = self.maybeAddWire(name,tok)
                 wir.isIO = True
                 self.inputWires.append(wir)
         for tok in self.token.args[2].lst:
@@ -149,11 +151,11 @@ class Module:
                 cnt = int(splt[-1])
                 nam = ":".join(splt[:-1])
                 for c in range(cnt):
-                    wir = self.maybeAddWire(f"{nam}:{c}")
+                    wir = self.maybeAddWire(f"{nam}:{c}",tok)
                     wir.isIO = True
                     self.outputWires.append(wir)
             else:
-                wir = self.maybeAddWire(name)
+                wir = self.maybeAddWire(name,tok)
                 wir.isIO = True
                 self.outputWires.append(wir)
     # def setupIOWire
@@ -176,12 +178,12 @@ class Module:
         if(token.typ == "word" and token.data == "repeat"):
             return self.parseRepeat(token,remap)
         if(token.isWire()):
-            return self.maybeAddWire(token.getWireName(remap))
+            return self.maybeAddWire(token.getWireName(remap),token)
         """if(token.typ == "word"):
-            return self.maybeAddWire(remap.get(token.data,token.data))
+            return self.maybeAddWire(remap.get(token.data,token.data),token)
         if(token.typ == ":"):
             wName = ":".join([remap.get(x.data,x.data) for x in token.lst])
-            return self.maybeAddWire(wName)
+            return self.maybeAddWire(wName,token)
         """
         if(token.typ == "="):
             return self.parseWireSet(token,remap)
@@ -194,7 +196,7 @@ class Module:
         lan = Lane(token)
         inverting = token.typ == "&"
         self.lanes.append(lan)
-        outWire = self.maybeAddWire(getRandName())
+        outWire = self.maybeAddWire(getRandName(),token)
         for subToken in token.lst:
             fetchWire = self.parseToken(subToken,remap)
             subInvert = inverting != subToken.invert
@@ -209,7 +211,7 @@ class Module:
         return outWire
 
     def parseWireSet(self,token,remap:dict) -> Wire:
-        baseWir = self.maybeAddWire(token.lst[0].getWireName(remap))
+        baseWir = self.maybeAddWire(token.lst[0].getWireName(remap),token)
         gotWire = self.parseToken(token.lst[1],remap)
         """
         for oLed in gotWire.outLets:
@@ -262,12 +264,12 @@ class Module:
             mLan = Lane(token)
             self.lanes.append(mLan)
             for cx in oLan.inLets:
-                cWire = self.maybeAddWire(mapping[cx.wire.name])
+                cWire = self.maybeAddWire(mapping[cx.wire.name],token)
                 let = Connection(cx.token,cWire,mLan,cx.dirLane,cx.invert)
                 self.cross.append(let)
                 let.insert()
             cx = oLan.outLet
-            cWire = self.maybeAddWire(mapping[cx.wire.name])
+            cWire = self.maybeAddWire(mapping[cx.wire.name],token)
             let = Connection(cx.token,cWire,mLan,cx.dirLane,cx.invert)
             self.cross.append(let)
             let.insert()
@@ -317,6 +319,20 @@ class Module:
 
     def reduceConnections(self) -> bool:
         didChange = False
+        for wir in self.wires:
+            if(wir.isIO):continue
+            if(wir.inLet is None):
+                raise Exception(f"Found wire with zero inlets! {wir.name}\n" +
+                                f"{wir.token.showWhere()}")
+            if(len(wir.outLets) == 0):
+                __PrintWarning(f"removing wire {wir.name}")
+                lanR = wir.inLet.lane
+                for cx in lanR.inLets:
+                    self.cross.remove(cx)
+                    cx.delete()
+                self.lanes.remove(lanR)
+                self.wires.remove(wir)
+                continue
         for lan in self.lanes:
             #if(lan.isIO):continue
             if(len(lan.inLets) == 0):
@@ -351,6 +367,7 @@ class Module:
                     usedWires.remove(w)
                 if(usedWires is None or len(usedWires) > 0):
                     continue
+                print("We have some similar wires!")
 
     def __str__(self):
         dat = f"<Module: {self.name}\n"

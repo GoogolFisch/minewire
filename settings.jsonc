@@ -1,27 +1,29 @@
 {
-	"mc-blocks":{
-		"baseBlock" :{"name":"minecraft:green_terracotta"},
-		// "baseBlock":{"name":"minecraft:redstone_lamp"},
-		"upBlock"   :{"name":"minecraft:oak_slab","type":"top"},
-		// "upBlock":{"name":"minecraft:glass"},
-		"wireBlock" :{"name":"minecraft:redstone_wire"},
-		"redirBlock":{"name":"minecraft:target"},
+	"minecraft":{
+		"blocks":{
+			"baseBlock" :{"name":"minecraft:green_terracotta"},
+			// "baseBlock":{"name":"minecraft:redstone_lamp"},
+			"upBlock"   :{"name":"minecraft:oak_slab","type":"top"},
+			// "upBlock":{"name":"minecraft:glass"},
+			"wireBlock" :{"name":"minecraft:redstone_wire"},
+			"redirBlock":{"name":"minecraft:target"},
 
-		"torchUp"    :{"name":"minecraft:target"},
-		"torchMinusX":{"name":"minecraft:redstone_wall_torch","facing":"west"},
-		"torchPlusX" :{"name":"minecraft:redstone_wall_torch","facing":"east"},
+			"torchUp"    :{"name":"minecraft:target"},
+			"torchMinusX":{"name":"minecraft:redstone_wall_torch","facing":"west"},
+			"torchPlusX" :{"name":"minecraft:redstone_wall_torch","facing":"east"},
 
-		"repeatMinusX":{"name":"minecraft:repeater","facing":"east"},
-		"repeatPlusX" :{"name":"minecraft:repeater","facing":"west"},
-		"repeatMinusZ":{"name":"minecraft:repeater","facing":"south"},
-		"repeatPlusZ" :{"name":"minecraft:repeater","facing":"north"}
-	},
-	"mc-schematic":{
-		"name"       :"Computational MineWire",
-		"author"     :"MineWire",
-		"description":"MineWire generated"
+			"repeatMinusX":{"name":"minecraft:repeater","facing":"east"},
+			"repeatPlusX" :{"name":"minecraft:repeater","facing":"west"},
+			"repeatMinusZ":{"name":"minecraft:repeater","facing":"south"},
+			"repeatPlusZ" :{"name":"minecraft:repeater","facing":"north"}
+		},
+		"mc-schematic":{
+			"name"       :"Computational MineWire",
+			"author"     :"MineWire",
+			"description":"MineWire generated",
+			"output"     :"./output.litematic"
+		}
 	},
 	"library":"./example/",
-	"output" :"./output.litematic",
 	"input"  :"./example/D-latch.mwire"
 }
