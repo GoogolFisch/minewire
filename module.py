@@ -5,8 +5,8 @@ import uuid
 LENGTH_MAX = 999_999
 HEAT_SPREAD = 10
 
-def __PrintError  (*d,**da):print("\e[0;31m",*d,"\e[0m",**da)
-def __PrintWarning(*d,**da):print("\e[0;33m",*d,"\e[0m",**da)
+def __PrintError  (*d,**da):print("\x1b[0;31m",*d,"\x1b[0m",**da)
+def __PrintWarning(*d,**da):print("\x1b[0;33m",*d,"\x1b[0m",**da)
 
 def getRandName():
     return f"-{uuid.uuid4()}"
@@ -83,6 +83,7 @@ class Lane:
     def __init__(self,token):
         self.inLets = []
         self.outLet = None
+        self.token = token
 
     def addInto(self,let:Connection):
         self.inLets.append(let)
@@ -178,7 +179,19 @@ class Module:
         if(token.typ == "word" and token.data == "repeat"):
             return self.parseRepeat(token,remap)
         if(token.isWire()):
-            return self.maybeAddWire(token.getWireName(remap),token)
+            w = self.maybeAddWire(token.getWireName(remap),token)
+            if(token.invert):
+                ilan = Lane(token)
+                wout = self.maybeAddWire(getRandName(),token)
+                self.lanes.append(ilan)
+                cx = Connection(token,w,ilan,True,True)
+                self.cross.append(cx)
+                cx.insert()
+                cx = Connection(token,wout,ilan,False,False)
+                self.cross.append(cx)
+                cx.insert()
+                return wout
+            return w
         """if(token.typ == "word"):
             return self.maybeAddWire(remap.get(token.data,token.data),token)
         if(token.typ == ":"):
@@ -223,7 +236,6 @@ class Module:
         """
         lan = Lane(token)
         self.lanes.append(lan)
-        self.wires.append(baseWir)
         #
         cx = Connection(token,gotWire,lan)
         self.cross.append(cx)
@@ -336,23 +348,30 @@ class Module:
         for lan in self.lanes:
             #if(lan.isIO):continue
             if(len(lan.inLets) == 0):
-                raise Exception(f"{lan.token.showWhere()}")
+                raise Exception("This has gone to an invalid state, pleas fix!\n" +
+                                f"{lan.token.showWhere()}")
             if(len(lan.inLets) == 1):
+                invert = lan.inLets[0].invert != lan.outLet.invert
+                print(f"{lan}\n" + 
+                      f"{lan.token.showWhere()}")
+                print(f"{lan.inLets[0].wire.inLet.lane}")
                 if(not lan.inLets[0].wire.isIO):
                     didChange = True
                     owir = lan.inLets[0].wire
                     owir.inLet.wire = lan.outLet.wire
+                    owir.inLet.invert = owir.inLet.invert != invert
                     #owir.inLet.wire.inLet = owir.inLet
                     self.cross.remove(lan.inLets[0].delete())
                     self.cross.remove(lan.outLet.delete())
                     self.lanes.remove(lan)
                     self.wires.remove(owir)
-                elif(not lan.outLet   .wire.isIO):
+                elif(not lan.outLet.wire.isIO):
                     didChange = True
                     owir = lan.outLet.wire
                     for cx in owir.outLets:
                         cx.wire = lan.inLets[0].wire
                         cx.wire.outLets.append(cx)
+                        cx.invert = cx.invert != invert
                     self.cross.remove(lan.inLets[0].delete())
                     self.cross.remove(lan.outLet.delete())
                     self.lanes.remove(lan)

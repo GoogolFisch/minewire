@@ -4,6 +4,7 @@ import sys
 import parser
 import module
 from jsonc_parser.parser import JsoncParser
+import importlib
 
 settings = {}
 if __name__ == "__main__":
@@ -14,6 +15,9 @@ if __name__ == "__main__":
         if(arg == '-o'):
             idx += 1
             settings["output"] = sys.argv[idx]
+        elif(arg == "-t"):
+            idx += 1
+            settings["type"] = sys.argv[idx]
         else:
             settings["input"] = arg
         idx += 1
@@ -30,7 +34,10 @@ def main():
     module.executeTokenList(topLevel)
     mainMod = module.Module.lookup["main"]
     mainMod.generate()
-    mainMod.reduceConnections()
+    while(mainMod.reduceConnections()):pass
     print(mainMod)
+    generator = importlib.import_module("gen." + settings["type"])
+    #generator = #__import__("./gen/" + settings["type"])
+    generator.main(settings,mainMod)
 
 if __name__ == "__main__":main()
