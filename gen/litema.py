@@ -1,5 +1,6 @@
 
 #import litemapy
+from gen.util import Cost
 from litemapy import Region, BlockState, Schematic
 
 class Blocks:
@@ -31,23 +32,25 @@ class Blocks:
             "output"     :"./output.litematic"
     }
 
-def safeCurruptBlocks():
-    global Blocks
-    old = Blocks
-    next = Blocks()
-    next.__dict__ = old.__dict__.copy()
-    Blocks = next
+def safeCurruptBlocks(settings):
+    try:
+        global Blocks
+        old = Blocks
+        next = Blocks()
+        next.__dict__ = old.__dict__.copy()
+        Blocks = next
+        mc_settings = settings["minecraft"]
+        schem_settings = mc_settings["mc-schematic"]
+        block_settings = mc_settings["blocks"]
+        for k,v in schem_settings.items():
+            Blocks.data[k] = v
+        Blocks.data["output"] = settings.get("type",Blocks.data["output"])
+        for k,v in block_settings.items():
+            cp = v.copy()
+            cp.pop("_id")
+            Blocks.__dict__[k] = BlockState(v["_id"],**cp)
+    except Exception as e:
+        print(e)
 
 def main(settings,module):
-    safeCurruptBlocks()
-    mc_settings = settings["minecraft"]
-    schem_settings = mc_settings["mc-schematic"]
-    block_settings = mc_settings["blocks"]
-    Blocks.__dict__ = Blocks.__dict__.copy()
-    for k,v in schem_settings.items():
-        Blocks.data[k] = v
-    for k,v in block_settings.items():
-        cp = v.copy()
-        cp.pop("_id")
-        Blocks.__dict__[k] = BlockState(v["_id"],**cp)
-
+    safeCurruptBlocks(settings)

@@ -395,6 +395,18 @@ class Module:
         dat += ">"
         return dat
 
+    def carbonCopy(self,
+                   newModule:type,newWire      :type,
+                   newLane  :type,newConnection:type):
+        """
+        """
+        wireMap = {}
+        laneMap = {}
+        corsList = []
+        wireList = []
+        laneList = []
+        return None
+
 
 def executeTokenList(tokenList:list[Token]):
     remap = {}
