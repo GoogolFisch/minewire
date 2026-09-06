@@ -1,6 +1,6 @@
 
 #import litemapy
-from gen.util import Cost
+from gen.util import Cost,LENGTH_MAX,HEAT_SPREAD
 from litemapy import Region, BlockState, Schematic
 
 class Blocks:
@@ -38,6 +38,9 @@ def safeCurruptBlocks(settings):
         old = Blocks
         next = Blocks()
         next.__dict__ = old.__dict__.copy()
+        next.baseXBlock = next.baseBlock
+        next.baseYBlock = next.baseBlock
+        next.baseZBlock = next.baseBlock
         Blocks = next
         mc_settings = settings["minecraft"]
         schem_settings = mc_settings["mc-schematic"]
@@ -52,5 +55,42 @@ def safeCurruptBlocks(settings):
     except Exception as e:
         print(e)
 
+class WireWire:pass
+class LaneLane:pass
+class WireLane:pass
+
+class WireVia:
+    __slots__ = ("name","lane","wire","start","end",
+                 "inLet","outLets")
+    def __init__(self,name,ref):
+        self.name  = name
+        self.lane  = 0
+        self.wire  = 0
+        self.start = LENGTH_MAX
+        self.end   = 0
+class LaneVia:
+    __slots__ = ("lane","wire","start","end","inLets","outLet")
+    def __init__(self,ref):
+        self.lane  = 0
+        self.wire  = 0
+        self.start = LENGTH_MAX
+        self.end   = 0
+class Connection:
+    __slots__ = ("wire","lane","invert","dirLane")
+    def __init__(self,wire,lane,dirLane,invert,ref):
+        self.wire = wire
+        self.lane = lane
+        self.invert = invert
+        self.dirLane = dirLane
+
+class Module:
+    __slots__ = ("wires","lanes","cross")
+    def __init__(self,wires,lanes,cross,ref):
+        self.wires = wires
+        self.lanes = lanes
+        self.cross = cross
+
 def main(settings,module):
     safeCurruptBlocks(settings)
+    m = module.carbonCopy(Module,WireVia,LaneVia,Connection)
+

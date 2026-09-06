@@ -2,9 +2,6 @@
 import random
 import uuid
 
-LENGTH_MAX = 999_999
-HEAT_SPREAD = 10
-
 def __PrintError  (*d,**da):print("\x1b[0;31m",*d,"\x1b[0m",**da)
 def __PrintWarning(*d,**da):print("\x1b[0;33m",*d,"\x1b[0m",**da)
 
@@ -397,15 +394,42 @@ class Module:
 
     def carbonCopy(self,
                    newModule:type,newWire      :type,
-                   newLane  :type,newConnection:type):
+                   newLane  :type,newConnection:type) -> Module:
         """
+        newModule(wires,lanes,cross,ref)
+        newWire(name,ref)
+        newLane(ref)
+        newCross(wire,lane,dirLane,invert,ref)
         """
         wireMap = {}
         laneMap = {}
         corsList = []
         wireList = []
         laneList = []
-        return None
+        for w in self.wires:
+            nw = newWire(w.name,w)
+            wireMap[w] = nw
+            wireList.append(nw)
+        for l in self.lanes:
+            nl = newLane(l)
+            laneMap[l] = nl
+            laneList.append(nl)
+        for c in self.cross:
+            nc = newCross(wireMap[c.wire],laneMap[c.lane],c.dirLane,c.invert,c)
+            corsList.append(nc)
+        mod = newModule(wireList,laneList,corsList,self)
+        return mod
+
+    def nukeThis(self):
+        self.token = None
+        self.wires = None
+        self.lanes = None
+        self.cross = None
+        self.remap = None
+        self.inputName   = None
+        self.outputName  = None
+        self.inputWires  = None
+        self.outputWires = None
 
 
 def executeTokenList(tokenList:list[Token]):

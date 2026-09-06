@@ -1,5 +1,8 @@
 
 
+LENGTH_MAX = 999_999
+HEAT_SPREAD = 10
+
 class Cost:
     __slots__ = ("length","errors")
     def __init__(self,leng,errs):
