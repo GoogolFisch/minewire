@@ -397,7 +397,7 @@ class Module:
                    newLane  :type,newConnection:type) -> Module:
         """
         newModule(wires,lanes,cross,ref)
-        newWire(name,ref)
+        newWire(name,ref,isInput,isOutput)
         newLane(ref)
         newCross(wire,lane,dirLane,invert,ref)
         """
@@ -407,7 +407,9 @@ class Module:
         wireList = []
         laneList = []
         for w in self.wires:
-            nw = newWire(w.name,w)
+            nw = newWire(w.name,w,
+                         w in self.inputWires,
+                         w in self.outputWires)
             wireMap[w] = nw
             wireList.append(nw)
         for l in self.lanes:

@@ -55,33 +55,80 @@ def safeCurruptBlocks(settings):
     except Exception as e:
         print(e)
 
-class WireWire:pass
-class LaneLane:pass
-class WireLane:pass
+class WireWire:
+    __slots__ = ("parent","layer","start","end")
+    def __init__(self,parent,layer):
+        self.parent = parent
+        self.layer  = layer
+        self.start  = LENGTH_MAX
+        self.end    = 0
+class LaneLane:
+    __slots__ = ("parent","layer","start","end")
+    def __init__(self,parent,layer):
+        self.parent = parent
+        self.layer  = layer
+        self.start  = LENGTH_MAX
+        self.end    = 0
+class WireLane:
+    __slots__ = ("parent","layer","lane","inlet","outlet")
+    def __init__(self,parent,layer,lane):
+        self.parent = parent
+        self.layer  = layer
+        self.lane   = lane
+        self.wire   = 0
+        self.inlet  = None
+        self.outlet = None
 
 class WireVia:
     __slots__ = ("name","lane","wire","start","end",
-                 "inLet","outLets")
-    def __init__(self,name,ref):
-        self.name  = name
-        self.lane  = 0
-        self.wire  = 0
-        self.start = LENGTH_MAX
-        self.end   = 0
+                 "inLet","outLets","isIO",
+                 "inputStack","outputStack",
+                 "inputPoint","outputPoint")
+    def __init__(self,name,ref,isInput=False,isOutput=False):
+        self.name    = name
+        self.lane    = 0
+        self.wire    = 0
+        self.start   = LENGTH_MAX
+        self.end     = 0
+        self.inLet   = None
+        self.outLets = []
+        self.isIO    = ref.isIO
+        self.wireStack   = []
+        self.inputPoint  = None
+        self.inputStack  = []
+        self.outputPoint = None
+        self.outputStack = []
+        #
+        splitName = filter(lambda x:x.isnumeric(),name.split(":")[1:])
+        refPoint = [int(x) for x in splitName]
+        while len(refPoint) < 3:refPoint.insert(0,0)
+        if(self.isInput ):self. inputPoint = refPoint
+        if(self.isOutput):self.outputPoint = refPoint
 class LaneVia:
-    __slots__ = ("lane","wire","start","end","inLets","outLet")
+    __slots__ = ("lane","wire","start","end","inLets","outLet","laneStack")
     def __init__(self,ref):
-        self.lane  = 0
-        self.wire  = 0
-        self.start = LENGTH_MAX
-        self.end   = 0
+        self.lane   = 0
+        self.wire   = 0
+        self.start  = LENGTH_MAX
+        self.end    = 0
+        self.inLets = []
+        self.outLet = None
+        self.laneStack = []
 class Connection:
-    __slots__ = ("wire","lane","invert","dirLane")
+    __slots__ = ("wireVia","laneVia","wire","lane","invert","dirLane")
     def __init__(self,wire,lane,dirLane,invert,ref):
-        self.wire = wire
-        self.lane = lane
-        self.invert = invert
+        self.wireVia = wire
+        self.laneVia = lane
+        self.wire    = None
+        self.lane    = None
+        self.invert  = invert
         self.dirLane = dirLane
+        if(self.dirLane):
+            self.wire.outLets.append(self)
+            self.lane.inLets .append(self)
+        else:
+            self.wire.inLet  = self
+            self.lane.outLet = self
 
 class Module:
     __slots__ = ("wires","lanes","cross")
