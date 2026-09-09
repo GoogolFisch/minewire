@@ -393,8 +393,8 @@ class Module:
         return dat
 
     def carbonCopy(self,
-                   newModule:type,newWire      :type,
-                   newLane  :type,newConnection:type) -> Module:
+                   newModule:type,newWire :type,
+                   newLane  :type,newCross:type) -> Module:
         """
         newModule(wires,lanes,cross,ref)
         newWire(name,ref,isInput,isOutput)

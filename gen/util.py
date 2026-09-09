@@ -5,7 +5,7 @@ HEAT_SPREAD = 10
 
 class Cost:
     __slots__ = ("length","errors")
-    def __init__(self,leng,errs):
+    def __init__(self,leng=0,errs=0):
         self.length = leng
         self.errors = errs
 
@@ -28,5 +28,17 @@ class Cost:
         return False
 
     def __add__(self,other):
-        return Cost(self.length + other.length,self.errors + other.errors)
+        if(type(other) == Cost):
+            return Cost(self.length + other.length,self.errors + other.errors)
+        if(type(other) == int):
+            return Cost(self.length + other,self.errors)
 
+    def __sub__(self,other):
+        if(type(other) == Cost):
+            return Cost(self.length - other.length,self.errors - other.errors)
+        if(type(other) == int):
+            return Cost(self.length - other,self.errors)
+
+    def __mul__(self,other):
+        if(type(other) == int):
+            return Cost(self.length * other,self.errors * other)
