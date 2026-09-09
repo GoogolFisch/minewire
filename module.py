@@ -348,6 +348,7 @@ class Module:
                 raise Exception("This has gone to an invalid state, pleas fix!\n" +
                                 f"{lan.token.showWhere()}")
             if(len(lan.inLets) == 1):
+                if lan.inLets[0].wire.inLet is None:continue
                 invert = lan.inLets[0].invert != lan.outLet.invert
                 print(f"{lan}\n" + 
                       f"{lan.token.showWhere()}")
