@@ -8,7 +8,7 @@
 			"wireBlock" :{"_id":"minecraft:redstone_wire"},
 			"redirBlock":{"_id":"minecraft:target"},
 
-			"torchUp"    :{"_id":"minecraft:target"},
+			"torchUp"    :{"_id":"minecraft:redstone_torch"},
 			"torchMinusX":{"_id":"minecraft:redstone_wall_torch","facing":"west"},
 			"torchPlusX" :{"_id":"minecraft:redstone_wall_torch","facing":"east"},
 
