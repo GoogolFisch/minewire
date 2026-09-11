@@ -29,32 +29,33 @@ def monotonicWireCounter(jump=-1):
 
 
 class Blocks:
-    baseBlock = BlockState("minecraft:green_terracotta")
-    baseXBlock = BlockState("minecraft:red_terracotta")
-    baseYBlock = BlockState("minecraft:green_terracotta")
-    baseZBlock = BlockState("minecraft:blue_terracotta")
-    upBlock = BlockState("minecraft:oak_slab",type="top")
-    wireBlock = BlockState("minecraft:redstone_wire")
-    redirBlock = BlockState("minecraft:target")
+    airBlock     = BlockState("minecaft:air")
+    baseBlock    = BlockState("minecraft:green_terracotta")
+    baseXBlock   = BlockState("minecraft:red_terracotta")
+    baseYBlock   = BlockState("minecraft:green_terracotta")
+    baseZBlock   = BlockState("minecraft:blue_terracotta")
+    upBlock      = BlockState("minecraft:oak_slab",type="top")
+    wireBlock    = BlockState("minecraft:redstone_wire")
+    redirBlock   = BlockState("minecraft:target")
 
-    torchUp = BlockState("minecraft:redstone_torch",lit="true")
+    torchUp      = BlockState("minecraft:redstone_torch",lit="true")
 
-    torchMinusX = BlockState("minecraft:redstone_wall_torch",facing="west")
-    torchPlusX = BlockState("minecraft:redstone_wall_torch",facing="east")
-    torchMinusZ = BlockState("minecraft:redstone_wall_torch",facing="north")
-    torchPlusZ = BlockState("minecraft:redstone_wall_torch",facing="south")
+    torchMinusX  = BlockState("minecraft:redstone_wall_torch",facing="west")
+    torchPlusX   = BlockState("minecraft:redstone_wall_torch",facing="east")
+    torchMinusZ  = BlockState("minecraft:redstone_wall_torch",facing="north")
+    torchPlusZ   = BlockState("minecraft:redstone_wall_torch",facing="south")
 
     repeatMinusX = BlockState("minecraft:repeater",facing="east")
-    repeatPlusX = BlockState("minecraft:repeater",facing="west")
+    repeatPlusX  = BlockState("minecraft:repeater",facing="west")
     repeatMinusZ = BlockState("minecraft:repeater",facing="south")
-    repeatPlusZ = BlockState("minecraft:repeater",facing="north")
+    repeatPlusZ  = BlockState("minecraft:repeater",facing="north")
 
-    data = {
-            "name"       :"Computational MineWire",
-            "author"     :"MineWire",
-            "description":"MineWire generated",
-            "output"     :"./output.litematic"
-    }
+    name        = "Computational MineWire",
+    author      = "MineWire",
+    description = "MineWire generated",
+    output      = "./output.litematic"
+    temperatur  = 100
+    decay       = 0.7
 
 def safeCurruptBlocks(settings):
     try:
@@ -70,8 +71,8 @@ def safeCurruptBlocks(settings):
         schem_settings = mc_settings["mc-schematic"]
         block_settings = mc_settings["blocks"]
         for k,v in schem_settings.items():
-            Blocks.data[k] = v
-        Blocks.data["output"] = settings.get("output",Blocks.data["output"])
+            Blocks.__dict__[k] = v
+        Blocks.output = settings.get("output",Blocks.output)
         for k,v in block_settings.items():
             cp = v.copy()
             idy = cp.pop("_id")
@@ -84,7 +85,7 @@ def safeCurruptBlocks(settings):
                 if(oldBase == Blocks.baseYBlock):Blocks.baseYBlock = newBase
                 if(oldBase == Blocks.baseZBlock):Blocks.baseZBlock = newBase
     except Exception as e:
-        print(e)
+        print(repr(e))
 
 class WireWire:
     __slots__ = ("parent","start","end")
@@ -162,7 +163,7 @@ class WireLane:
 
     def getRawCost(self):
         self.update()
-        return Cost(self.end - self.start) * 3 + Cost(self.end + self.start)
+        return Cost(self.end - self.start + self.lane) * 3 + Cost(self.end + self.start + self.lane)
 
     def __str__(self):
         return f"<{self.parent.name}:{self.layer},{self.lane},{self.wire} {self.start}-{self.end}>"
@@ -293,6 +294,117 @@ class WireVia:
         cost += vCost * 3
         return cost
 
+    def _writeTreeBranch(self,reg,strength,layer,dirUp=False,dirDown=False) -> int:
+        sw = self.getIfLayer(layer)
+        if(sw is None):return
+        startl = self.lane
+        ly4 = layer * 4
+        lw3 = self.wire * 3
+        strengthl = strength
+        if(self.inLet is not None and self.inLet.layer == layer):
+            startl = self.inLet.laneVia.lane
+            strengthl = (3 - (abs(self.lane - startl) % 4)) * 3
+        elif(self.inLane is not None and self.inLane.layer == layer):
+            startl = self.inLane.lane
+        #
+        ln = startl + strengthl // 3
+        while ln < sw.end:
+            if(ln != self.lane):
+                reg[ln * 3,ly4 + 1,lw3] = Blocks.repeatPlusX
+            else:
+                strengthl = 0
+                ln += 1
+                continue
+            ln += 4
+        ln = startl - strengthl // 3
+        while ln > sw.start:
+            if(ln != self.lane):
+                reg[ln * 3,ly4 + 1,lw3] = Blocks.repeatMinusX
+            else:
+                strengthl = 0
+                ln -= 1
+                continue
+            ln -= 4
+        ln = self.lane
+        if(dirUp and strengthl < 2):
+            reg[ln * 3    ,ly4 + 1,lw3 - 1] = Blocks.baseYBlock
+            reg[ln * 3    ,ly4 + 2,lw3 - 1] = Blocks.wireBlock
+            reg[ln * 3 + 1,ly4 + 1,lw3 - 1] = Blocks.baseYBlock
+            reg[ln * 3 + 1,ly4 + 2,lw3 - 1] = Blocks.wireBlock
+            reg[ln * 3 + 1,ly4 + 1,lw3    ] = Blocks.baseYBlock
+            reg[ln * 3 + 1,ly4 + 2,lw3    ] = Blocks.repeatPlusZ
+        if(dirDown and strengthl < 2):
+            reg[ln * 3    ,ly4 - 1,lw3    ] = Blocks.repeatMinusZ
+            reg[ln * 3    ,ly4 - 2,lw3    ] = Blocks.upBlock
+            reg[ln * 3 + 1,ly4 - 2,lw3    ] = Blocks.airBlock
+            reg[ln * 3 + 1,ly4 - 1,lw3 - 1] = Blocks.baseYBlock
+            reg[ln * 3 + 1,ly4 - 2,lw3 - 1] = Blocks.wireBlock
+            reg[ln * 3 + 1,ly4 - 3,lw3 - 1] = Blocks.baseYBlock
+        return strengthl * 3 - 4
+
+
+    def writeTree(self,reg):
+        startY = self.start
+        if(self.inLet is not None):startY = self.inLet.layer
+        elif(self.inLane is not None):startY = self.inLane.layer
+        layer = startY
+        stren = self._writeTreeBranch(reg,12,startY,
+                                      layer < self.end,layer > self.start)
+        carS = stren
+        for layer in range(startY + 1,self.end   + 1, 1):
+            carS = self._writeTreeBranch(reg,carS,layer,layer < self.end,False)
+        for layer in range(startY - 1,self.start - 1,-1):
+            carS = self._writeTreeBranch(reg,carS,layer,False,layer > self.start)
+
+
+
+    def write(self,reg):
+        wl3 = self.lane * 3
+        ww3 = self.wire * 3
+        for layer in rangeOver(self):
+            try:
+                subW = self.getIfLayer(layer)
+                for x in range(subW.start * 3,subW.end * 3 + 1):
+                    reg[x,layer * 4    ,ww3] = Blocks.baseXBlock
+                    reg[x,layer * 4 + 1,ww3] = Blocks.wireBlock
+            except Exception as e:
+                print(layer,x,ww3,subW.start,subW.end)
+                raise e
+        for layer in range(self.start,self.end):
+            reg[wl3    ,layer * 4    ,ww3    ] = Blocks.baseYBlock
+            reg[wl3 + 1,layer * 4 + 1,ww3    ] = Blocks.baseYBlock
+            reg[wl3 + 1,layer * 4 + 2,ww3 + 1] = Blocks.baseYBlock
+            reg[wl3    ,layer * 4 + 3,ww3 + 1] = Blocks.baseYBlock
+            reg[wl3    ,layer * 4 + 1,ww3    ] = Blocks.wireBlock
+            reg[wl3 + 1,layer * 4 + 2,ww3    ] = Blocks.wireBlock
+            reg[wl3 + 1,layer * 4 + 3,ww3 + 1] = Blocks.wireBlock
+            reg[wl3    ,layer * 4 + 4,ww3 + 1] = Blocks.wireBlock
+        ol = self.inLane or self.outLane
+        ow = self.inWire or self.outWire
+        if(ol is None):
+            self.writeTree(reg)
+            return
+        ol3 = ol.lane * 3
+        ow3 = ol.wire * 3
+        ly4   = ol.layer * 4
+        for z in range(ol.start * 3 + 1,ol.end * 3):
+            if(reg[ol3,ly4 + 2,z].id != "minecraft:air"):continue
+            reg[ol3,ly4 + 2,z] = Blocks.baseZBlock
+            if(reg[ol3,ly4 + 3,z].id != "minecraft:air"):continue
+            reg[ol3,ly4 + 3,z] = Blocks.wireBlock
+        reg[ol3,ly4 + 1,ol.start * 3] = Blocks.baseBlock
+        reg[ol3,ly4 + 2,ol.start * 3] = Blocks.wireBlock
+        reg[ol3,ly4 + 1,ol.end   * 3] = Blocks.baseBlock
+        reg[ol3,ly4 + 2,ol.end   * 3] = Blocks.wireBlock
+        reg[ow.end * 3,ly4 + 1,ow3] = Blocks.baseBlock
+        reg[ow.end * 3,ly4 + 2,ow3] = Blocks.wireBlock
+        for x in range(ow.start * 3,ow.end * 3):
+            if(reg[x,ly4    ,ow3].id != "minecraft:air"):continue
+            reg[x,ly4    ,ow3] = Blocks.baseXBlock
+            if(reg[x,ly4 + 1,ow3].id != "minecraft:air"):continue
+            reg[x,ly4 + 1,ow3] = Blocks.wireBlock
+        self.writeTree(reg)
+
     def __str__(self):
         return (f"<{self.name} : wire={self.wire},lane={self.lane} " +
                 f"{self.start}-{self.end}>")
@@ -353,6 +465,26 @@ class LaneVia:
         cost += vCost * 3
         return cost
 
+    def write(self,reg):
+        ll3 = self.lane * 3
+        lw3 = self.wire * 3
+        for layer in rangeOver(self):
+            ly4 = layer * 4
+            subL = self.getIfLayer(layer)
+            for z in range(subL.start * 3,subL.end * 3 + 1):
+                reg[ll3,ly4 + 2,z] = Blocks.baseZBlock
+                reg[ll3,ly4 + 3,z] = Blocks.wireBlock
+        for layer in range(self.start,self.end):
+            reg[ll3    ,layer * 4 + 2,lw3    ] = Blocks.baseYBlock
+            reg[ll3 + 1,layer * 4 + 3,lw3    ] = Blocks.baseYBlock
+            reg[ll3 + 1,layer * 4 + 4,lw3 + 1] = Blocks.baseYBlock
+            reg[ll3    ,layer * 4 + 5,lw3 + 1] = Blocks.baseYBlock
+            reg[ll3    ,layer * 4 + 3,lw3    ] = Blocks.wireBlock
+            reg[ll3 + 1,layer * 4 + 4,lw3    ] = Blocks.wireBlock
+            reg[ll3 + 1,layer * 4 + 5,lw3 + 1] = Blocks.wireBlock
+            reg[ll3    ,layer * 4 + 6,lw3 + 1] = Blocks.wireBlock
+
+
     def __str__(self):
         return (f"<wire={self.wire},lane={self.lane} " +
                 f"{self.start}-{self.end}>")
@@ -367,13 +499,14 @@ class LaneVia:
 
 
 class Connection:
-    __slots__ = ("wireVia","laneVia","layer","invert","dirLane")
+    __slots__ = ("wireVia","laneVia","layer","invert","dirLane","strength")
     def __init__(self,wire,lane,dirLane,invert,ref):
         self.wireVia = wire
         self.laneVia = lane
         self.invert  = invert
         self.dirLane = dirLane
         self.layer   = 0
+        self.strength = 0
         if(self.dirLane):
             self.wireVia.outLets.append(self)
             self.laneVia.inLets .append(self)
@@ -387,6 +520,43 @@ class Connection:
         lane = self.laneVia.makeGetLayer(self.layer)
         wire.update(self)
         lane.update(self)
+
+    def write(self,reg):
+        ll3 = self.laneVia.lane * 3
+        ly4 = self.layer * 4
+        ww3 = self.wireVia.wire * 3
+        dx = 1
+        dz = 1
+        sw = self.wireVia.getIfLayer(self.layer)
+        sl = self.laneVia.getIfLayer(self.layer)
+        if(sl.end <= self.wireVia.wire):dz = -1
+        if(sw.end <= self.laneVia.lane):dx = -1
+        if(self.dirLane):
+            if(self.invert):
+                reg[ll3 + dx,ly4 + 1,ww3 + dz] = Blocks.redirBlock
+                reg[ll3 + dx,ly4 + 2,ww3 + dz] = Blocks.torchUp
+                reg[ll3 + dx,ly4 + 3,ww3 + dz] = Blocks.baseBlock
+            else:
+                reg[ll3     ,ly4 + 2,ww3] = Blocks.upBlock
+                reg[ll3 + dx,ly4 + 2,ww3] = Blocks.wireBlock
+                reg[ll3 + dx,ly4 + 1,ww3] = Blocks.baseBlock
+        else:
+            if(self.invert):
+                if(self.laneVia.lane > sw.start):
+                    reg[ll3 - 1,ly4 + 2,ww3] = Blocks.torchMinusX
+                if(self.laneVia.lane < sw.end  ):
+                    reg[ll3 + 1,ly4 + 2,ww3] = Blocks.torchPlusX
+            else:
+                if(self.laneVia.lane > sw.start):
+                    reg[ll3 - 1,ly4 + 1,ww3] = Blocks.baseBlock
+                    reg[ll3 - 1,ly4 + 2,ww3] = Blocks.repeatMinusX
+                    if(reg[ll3 - 2,ly4 + 2,ww3].id == "minecraft:air"):
+                        reg[ll3 - 2,ly4 + 2,ww3] = Blocks.baseBlock
+                if(self.laneVia.lane < sw.end  ):
+                    reg[ll3 + 1,ly4 + 1,ww3] = Blocks.baseBlock
+                    reg[ll3 + 1,ly4 + 2,ww3] = Blocks.repeatPlusX
+                    if(reg[ll3 + 2,ly4 + 2,ww3].id == "minecraft:air"):
+                        reg[ll3 + 2,ly4 + 2,ww3] = Blocks.baseBlock
 
     def __str__(self):
         return f"[{self.wireVia.name}:{self.layer} {["","~"][self.invert]}{"wl"[self.dirLane]}]"
@@ -595,15 +765,11 @@ class Module:
                     collisions.append(("(2026-09-10T09:10:52)+",lane,layer,
                                        wv,parent.lane,wv.lane,None))
                     continue
-            if(wv.inLane is not None):
-                if(wv.inLane.wire == parent.wire and wv.inLane.layer == layer):
-                    if(wv.inLane.start <= lane.end and lane.start <= wv.inLane.end):
-                        collisions.append(("(2026-09-10T09:10:56)",wv,wv.inLane))
-                        continue
-            if(wv.outLane is not None):
-                if(wv.outLane.wire == parent.wire and wv.outLane.layer == layer):
-                    if(wv.outLane.start <= lane.end and lane.start <= wv.outLane.end):
-                        collisions.append(("(2026-09-10T09:10:59)",wv,wv.outLane))
+            ol = wv.inLane or wv.outLane
+            if(ol is not None):
+                if(ol.lane == parent.lane and ol.layer == layer):
+                    if(ol.start <= lane.end and lane.start <= ol.end):
+                        collisions.append(("(2026-09-10T09:10:56)",wv,ol))
                         continue
         for lv in self.lanes:
             if(lv is parent):continue
@@ -708,7 +874,16 @@ class Module:
             if newC.testLt(temp,baseC):return True
         wv.wire = oldW
         wv.lane = oldL
-        self.getCostDiffWireV(wv)
+        ol = wv.inLane or wv.outLane
+        if(ol is None):
+            self.getCostDiffWireV(wv)
+            return False
+        oldL = ol.lane
+        for lan in range(1,wv.lane):
+            ol.lane = lan
+            newC = self.getCostDiffWireV(wv)
+            if newC.testLt(temp,baseC):return True
+        ol.lane = oldL
         return False
 
     def tryCompactCross(self,temp:float,cx):
@@ -762,24 +937,6 @@ class Module:
     def compact(self,temp:float) -> bool:
         if(DO_FORCE_CHECK):prev = self.getTotalCost()
         didChange = False
-        if(DO_FORCE_CHECK):print("lanes")
-        random.shuffle(self.lanes)
-        for lv in self.lanes:
-            ch = self.tryCompactLaneV(temp,lv)
-            didChange |= ch
-            if(DO_FORCE_CHECK and ch):
-                next = self.getTotalCost()
-                if(next.errors > prev.errors):
-                    print("(12:55:40)",lv.showContext())
-                    if(lv.outLet is not None):
-                        print(lv.outLet.wireVia.showContext())
-                    for ol in lv.inLets:
-                        print(ol.laneVia.showContext())
-                    breakpoint()
-                    next = self.getTotalCost(True)
-                    return False
-                print(f"{prev} -> {next}")
-                prev = next
         if(DO_FORCE_CHECK):print("wires")
         random.shuffle(self.wires)
         for wv in self.wires:
@@ -792,6 +949,24 @@ class Module:
                     if(wv.inLet is not None):
                         print(wv.inLet.laneVia.showContext())
                     for ol in wv.outLets:
+                        print(ol.laneVia.showContext())
+                    breakpoint()
+                    next = self.getTotalCost(True)
+                    return False
+                print(f"{prev} -> {next}")
+                prev = next
+        if(DO_FORCE_CHECK):print("lanes")
+        random.shuffle(self.lanes)
+        for lv in self.lanes:
+            ch = self.tryCompactLaneV(temp,lv)
+            didChange |= ch
+            if(DO_FORCE_CHECK and ch):
+                next = self.getTotalCost()
+                if(next.errors > prev.errors):
+                    print("(12:55:40)",lv.showContext())
+                    if(lv.outLet is not None):
+                        print(lv.outLet.wireVia.showContext())
+                    for ol in lv.inLets:
                         print(ol.laneVia.showContext())
                     breakpoint()
                     next = self.getTotalCost(True)
@@ -834,56 +1009,19 @@ class Module:
         for o in self.wires: print(f"- {o}")
         print(maxX,maxY,maxZ)
 
-        reg = Region(0,0,0,maxX * 3 + 1,maxY * 4 + 4,maxZ * 3 + 1)
+        #reg = Region(0,0,0,maxX * 3 + 1,maxY * 4 + 4,maxZ * 3 + 1)
+        reg = Region(0,0,0,maxX * 3 + 3,maxY * 4 + 4,maxZ * 3 + 3)
         schem = reg.as_schematic(
-                name=Blocks.data["name"],
-                author=Blocks.data["author"],
-                description=Blocks.data["description"])
+                name=Blocks.name,
+                author=Blocks.author,
+                description=Blocks.description)
 
-        for wv in self.wires:
-            try:
-                for y in range(wv.start * 4,wv.end * 4 + 3):
-                    reg[wv.lane * 3,y,wv.wire * 3] = Blocks.redirBlock
-            except Exception as e:
-                print("(2026-09-10T19:03:29)",wv.lane * 3,wv.start * 4,wv.end * 4 + 3,wv.wire * 3)
-                raise e
+        for wv in self.wires:wv.write(reg)
+        for lv in self.lanes:lv.write(reg)
+        for cx in self.cross:cx.write(reg)
 
-            for layer in rangeOver(wv):
-                subW = wv.getIfLayer(layer)
-                try:
-                    for z in range(subW.start * 3,subW.end * 3 + 1):
-                        reg[z,layer * 4,wv.wire * 3] = Blocks.baseXBlock
-                except Exception as e:
-                    print("(2026-09-10T19:01:46)",subW.start * 3,subW.end * 3 + 1,layer * 4,wv.wire * 3,wv,layer)
-                    raise e
-            ol = wv.inLane or wv.outLane
-            ow = wv.inWire or wv.outWire
-            if(ol is None):continue
-            layer = ol.layer
-            for z in range(ol.start * 3,ol.end * 3 + 1):
-                reg[ol.lane * 3,layer * 4 + 2,z] = Blocks.baseZBlock
-            for x in range(ow.start * 3,ow.end * 3 + 1):
-                reg[x,layer * 4,ol.wire * 3] = Blocks.baseXBlock
-
-        for lv in self.lanes:
-            for y in range(lv.start * 4,lv.end * 4 + 3):
-                reg[lv.lane * 3,y,lv.wire * 3] = Blocks.upBlock
-            for layer in rangeOver(lv):
-                subL = lv.getIfLayer(layer)
-                for z in range(subL.start * 3,subL.end * 3 + 1):
-                    reg[lv.lane * 3,layer * 4 + 2,z] = Blocks.baseZBlock
-
-        for cx in self.cross:
-            #print(cx.laneVia.wire,cx.laneVia.lane,
-            #      cx.layer,cx.wireVia.wire,cx.wireVia.lane)
-            reg[
-                    cx.laneVia.lane * 3,
-                    cx.layer * 4 + 1 + 2 * cx.dirLane,
-                    cx.wireVia.wire * 3
-                ] = [Blocks.repeatPlusX,Blocks.torchUp][cx.invert]
-
-        schem.save(Blocks.data["output"])
-        print(Blocks.data["output"])
+        schem.save(Blocks.output)
+        print(Blocks.output)
         return ((maxX,maxY,maxZ),self.getTotalCost())
 
 
@@ -895,11 +1033,12 @@ def main(settings,module):
     m = module.carbonCopy(Module,WireVia,LaneVia,Connection)
     m.layout()
     m.getTotalCost(1)
-    temp = 100
+    temp  = int  (Blocks.temperatur)
+    decay = float(Blocks.decay     )
     counter = 0
     #while False and m.compact(temp):
     while m.compact(temp):
-        temp *= 0.75
+        temp *= decay
         counter += 1
         print(counter,end="\b"*10,flush=True)
     dim,cost,*_ = m.write()
