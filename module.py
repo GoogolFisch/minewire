@@ -2,8 +2,8 @@
 import random
 import uuid
 
-def __PrintError  (*d,**da):print("\x1b[0;31m",*d,"\x1b[0m",**da)
-def __PrintWarning(*d,**da):print("\x1b[0;33m",*d,"\x1b[0m",**da)
+def _PrintError  (*d,**da):print("\x1b[0;31m",*d,"\x1b[0m",**da)
+def _PrintWarning(*d,**da):print("\x1b[0;33m",*d,"\x1b[0m",**da)
 
 def getRandName():
     return f"-{uuid.uuid4()}"
@@ -32,14 +32,16 @@ class Connection:
                 self.wire.outLets.remove(self)
                 self.lane.inLets.remove(self)
             except Exception as e:
-                __PrintError(e)
-                __PrintError(self.wire)
-                __PrintError(self.lane)
-                __PrintError(self.token.showWhere())
+                _PrintError(e)
+                _PrintError(self.wire)
+                _PrintError(self.lane)
+                _PrintError(self.token.showWhere())
                 raise e
         else:
             if(self.wire. inLet is self):self.wire. inLet = None
             if(self.lane.outLet is self):self.lane.outLet = None
+        self.wire = None
+        self.lane = None
         return self
 
     def insert(self,debug=False):
@@ -162,7 +164,7 @@ class Module:
         if(self.hasGenerated):return
         if(self.isGenerating):
             if(callee is not None):
-                __PrintError(callee.token.showWhere())
+                _PrintError(callee.token.showWhere())
             raise Exception(f"cyclic Dependency! for \n{self.token.showWhere()}")
         self.setupIOWire(self.remap)
         self.isGenerating = True
@@ -252,8 +254,8 @@ class Module:
             varStart = int(remap.get(iStart,iStart))
             varStop  = int(remap.get(iStop ,iStop ))
         except Exception as e:
-            __PrintError(remap)
-            __PrintError(e)
+            _PrintError(remap)
+            _PrintError(e)
             raise Exception(f"Error with {token.showWhere()}")
         for count in range(varStart,varStop):
             remap[varName] = str(count)
@@ -264,7 +266,7 @@ class Module:
     def parseSubModule(self,token,remap:dict) -> None:
         oMod = Module.lookup.get(token.args[0].data)
         if(oMod is None):
-            __PrintError(self.token.showWhere())
+            _PrintError(self.token.showWhere())
             raise Exception(f"Not found module of name {token.args[0].data}")
         oMod.generate(self)
         mapping = oMod.createTranslation(token,remap,token.lst[0].lst,token.lst[1].lst)
@@ -326,26 +328,47 @@ class Module:
                 translation[wir.name] = f"{wir.name}@{self.name}{getRandNameSmall()}"
         return translation
 
+    def _raiseOnInvalid(self,s=""):
+        for cx in self.cross:
+            if(cx.lane not in self.lanes):
+                raise Exception(f"(2026-09-11T20:04:35) {s} {cx} Can't find {cx.lane} in lanes")
+            if(cx.wire not in self.wires):
+                raise Exception(f"(2026-09-11T20:05:05) {s} {cx} Can't find {cx.wire} in wires")
+            if(cx not in ([cx.wire.inLet] + cx.wire.outLets)):
+                raise Exception(f"(2026-09-11T20:15:19) {s} {cx} Can't find {cx.wire} in wires rev")
+            if(cx not in ([cx.lane.outLet] + cx.lane.inLets)):
+                raise Exception(f"(2026-09-11T20:15:47) {s} {cx} Can't find {cx.lane} in lanes rev")
+
     def reduceConnections(self) -> bool:
         didChange = False
-        for wir in self.wires:
+        for wir in self.wires.copy():
             if(wir.isIO):continue
             if(wir.inLet is None):
-                raise Exception(f"Found wire with zero inlets! {wir.name}\n" +
+                for cx in wir.outLets:
+                    self.cross.remove(cx.delete())
+                self.wires.remove(wir)
+                didChange = True
+                _PrintWarning(f"Found wire with zero inlets! {wir.name}\n" +
                                 f"{wir.token.showWhere()}")
+                continue
             if(len(wir.outLets) == 0):
-                __PrintWarning(f"removing wire {wir.name}")
+                _PrintWarning(f"removing wire {wir.name}")
                 lanR = wir.inLet.lane
                 for cx in lanR.inLets:
-                    self.cross.remove(cx)
-                    cx.delete()
+                    self.cross.remove(cx.delete())
+                cx = wir.inLet
+                if(cx is not None):self.cross.remove(cx.delete())
                 self.lanes.remove(lanR)
                 self.wires.remove(wir)
+                didChange = True
                 continue
-        for lan in self.lanes:
+        for lan in self.lanes.copy():
             #if(lan.isIO):continue
             if(len(lan.inLets) == 0):
-                raise Exception("This has gone to an invalid state, pleas fix!\n" +
+                if(lan.outLet is not None):
+                    self.cross.remove(lan.outLet.delete())
+                self.lanes.remove(lan)
+                _PrintWarning("This has gone to an invalid state, pleas fix!\n" +
                                 f"{lan.token.showWhere()}")
             if(len(lan.inLets) == 1):
                 if lan.inLets[0].wire.inLet is None:continue
@@ -354,17 +377,22 @@ class Module:
                       f"{lan.token.showWhere()}")
                 print(f"{lan.inLets[0].wire.inLet.lane}")
                 if(not lan.inLets[0].wire.isIO):
-                    didChange = True
+                    # TODO
                     owir = lan.inLets[0].wire
-                    owir.inLet.wire = lan.outLet.wire
-                    owir.inLet.invert = owir.inLet.invert != invert
-                    #owir.inLet.wire.inLet = owir.inLet
+                    tw = lan.outLet.wire
+                    inv2 = owir.inLet.invert != invert
+                    owir.inLet.invert = inv2
+                    owir.inLet.wire = tw # Error?
+                    tw.inLet = owir.inLet
+                    #
                     self.cross.remove(lan.inLets[0].delete())
                     self.cross.remove(lan.outLet.delete())
+                    #owir.inLet.wire.inLet = owir.inLet
                     self.lanes.remove(lan)
                     self.wires.remove(owir)
-                elif(not lan.outLet.wire.isIO):
                     didChange = True
+                    self._raiseOnInvalid(f"{lan} {owir} {tw} | ")
+                elif(not lan.outLet.wire.isIO):
                     owir = lan.outLet.wire
                     for cx in owir.outLets:
                         cx.wire = lan.inLets[0].wire
@@ -374,6 +402,7 @@ class Module:
                     self.cross.remove(lan.outLet.delete())
                     self.lanes.remove(lan)
                     self.wires.remove(owir)
+                    didChange = True
             for lan2 in self.lanes:
                 if(lan is lan2):continue
                 usedWires = lan2.inLets.copy()
@@ -385,6 +414,8 @@ class Module:
                 if(usedWires is None or len(usedWires) > 0):
                     continue
                 print("We have some similar wires!")
+        self._raiseOnInvalid()
+        return didChange
 
     def __str__(self):
         dat = f"<Module: {self.name}\n"
@@ -418,6 +449,8 @@ class Module:
             laneMap[l] = nl
             laneList.append(nl)
         for c in self.cross:
+            if(c.wire not in wireMap):
+                _PrintError(c,wireMap,c.wire)
             nc = newCross(wireMap[c.wire],laneMap[c.lane],c.dirLane,c.invert,c)
             corsList.append(nc)
         mod = newModule(wireList,laneList,corsList,self)
