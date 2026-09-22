@@ -21,7 +21,8 @@
 			"name"       :"Computational MineWire",
 			"author"     :"MineWire",
 			"description":"MineWire generated",
-			"output"     :"./output.litematic"
+			"output"     :"./output.litematic",
+			"maxY"       :32
 		}
 	},
 	"library":"./example/",

@@ -55,7 +55,7 @@ class Blocks:
     description = "MineWire generated",
     output      = "./output.litematic"
     temperatur  = 100
-    decay       = 0.7
+    decay       = 0.2
 
 def safeCurruptBlocks(settings):
     try:
@@ -301,11 +301,13 @@ class WireVia:
         ly4 = layer * 4
         lw3 = self.wire * 3
         strengthl = strength
-        if(self.inLet is not None and self.inLet.layer == layer):
-            startl = self.inLet.laneVia.lane
-            strengthl = (3 - (abs(self.lane - startl) % 4)) * 3
-        elif(self.inLane is not None and self.inLane.layer == layer):
-            startl = self.inLane.lane
+        if(self.inLet is not None):
+            if(self.inLet.layer == layer):
+                startl = self.inLet.laneVia.lane
+                strengthl = (3 - (abs(self.lane - startl) % 4)) * 3
+        elif(self.inLane is not None):
+            if(self.inLane.layer == layer):
+                startl = self.inLane.lane
         #
         ln = startl + strengthl // 3
         while ln < sw.end:
@@ -319,28 +321,34 @@ class WireVia:
         ln = startl - strengthl // 3
         while ln > sw.start:
             if(ln != self.lane):
-                reg[ln * 3,ly4 + 1,lw3] = Blocks.repeatMinusX
+                try:
+                    reg[ln * 3,ly4 + 1,lw3] = Blocks.repeatMinusX
+                except Exception as e:
+                    print(ln * 3,ly4 + 1,lw3)
+                    raise e
             else:
                 strengthl = 0
                 ln -= 1
                 continue
             ln -= 4
         ln = self.lane
-        if(dirUp and strengthl < 2):
-            reg[ln * 3    ,ly4 + 1,lw3 - 1] = Blocks.baseYBlock
-            reg[ln * 3    ,ly4 + 2,lw3 - 1] = Blocks.wireBlock
-            reg[ln * 3 + 1,ly4 + 1,lw3 - 1] = Blocks.baseYBlock
-            reg[ln * 3 + 1,ly4 + 2,lw3 - 1] = Blocks.wireBlock
-            reg[ln * 3 + 1,ly4 + 1,lw3    ] = Blocks.baseYBlock
-            reg[ln * 3 + 1,ly4 + 2,lw3    ] = Blocks.repeatPlusZ
-        if(dirDown and strengthl < 2):
+        if(dirUp and strengthl < 5):
+            reg[ln * 3    ,ly4 + 1,lw3 - 1] = Blocks.redirBlock
+            reg[ln * 3    ,ly4 + 2,lw3 - 1] = Blocks.torchUp
+            reg[ln * 3    ,ly4 + 3,lw3 - 1] = Blocks.baseYBlock
+            reg[ln * 3    ,ly4 + 4,lw3 - 1] = Blocks.torchUp
+            reg[ln * 3    ,ly4 + 5,lw3 - 1] = Blocks.baseYBlock
+            reg[ln * 3    ,ly4 + 4,lw3 + 1] = Blocks.airBlock
+        if(dirDown and strengthl < 6):
             reg[ln * 3    ,ly4 - 1,lw3    ] = Blocks.repeatMinusZ
             reg[ln * 3    ,ly4 - 2,lw3    ] = Blocks.upBlock
             reg[ln * 3 + 1,ly4 - 2,lw3    ] = Blocks.airBlock
-            reg[ln * 3 + 1,ly4 - 1,lw3 - 1] = Blocks.baseYBlock
-            reg[ln * 3 + 1,ly4 - 2,lw3 - 1] = Blocks.wireBlock
-            reg[ln * 3 + 1,ly4 - 3,lw3 - 1] = Blocks.baseYBlock
-        return strengthl * 3 - 4
+            reg[ln * 3    ,ly4 - 1,lw3 - 1] = Blocks.baseYBlock
+            reg[ln * 3    ,ly4 - 2,lw3 - 1] = Blocks.wireBlock
+            reg[ln * 3    ,ly4 - 3,lw3 - 1] = Blocks.baseYBlock
+        if(strengthl <= 0):
+            return 12
+        return strengthl - 4
 
 
     def writeTree(self,reg):
@@ -1010,7 +1018,8 @@ class Module:
         print(maxX,maxY,maxZ)
 
         #reg = Region(0,0,0,maxX * 3 + 1,maxY * 4 + 4,maxZ * 3 + 1)
-        reg = Region(0,0,0,maxX * 3 + 3,maxY * 4 + 4,maxZ * 3 + 3)
+        #reg = Region(0,0,0,maxX * 3 + 3,maxY * 4 + 4,maxZ * 3 + 3)
+        reg = Region(0,0,0,maxX * 3 + 4,maxY * 4 + 4,maxZ * 3 + 4)
         schem = reg.as_schematic(
                 name=Blocks.name,
                 author=Blocks.author,

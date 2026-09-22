@@ -2,6 +2,8 @@
 import random
 import uuid
 
+DO_FORCE_CHECK = False
+
 def _PrintError  (*d,**da):print("\x1b[0;31m",*d,"\x1b[0m",**da)
 def _PrintWarning(*d,**da):print("\x1b[0;33m",*d,"\x1b[0m",**da)
 
@@ -40,8 +42,8 @@ class Connection:
         else:
             if(self.wire. inLet is self):self.wire. inLet = None
             if(self.lane.outLet is self):self.lane.outLet = None
-        self.wire = None
-        self.lane = None
+        #self.wire = None
+        #self.lane = None
         return self
 
     def insert(self,debug=False):
@@ -55,7 +57,7 @@ class Connection:
             self.lane.outLet = self
 
     def __str__(self):
-        dat = f"<Connection:{' ~'[self.invert]}{"wl"[self.dirLane]} {self.wire.name}>"
+        dat = f"<({str(id(self))[-4:]})Connection:{' ~'[self.invert]}{"wl"[self.dirLane]} {self.wire.name}>"
         return dat
 
 class Wire:
@@ -328,16 +330,57 @@ class Module:
                 translation[wir.name] = f"{wir.name}@{self.name}{getRandNameSmall()}"
         return translation
 
+    def _testRaiseCross(self,cx) -> bool:
+            if(cx.lane not in self.lanes):return True
+            if(cx.wire not in self.wires):return True
+            if(cx not in ([cx.wire.inLet] + cx.wire.outLets)):return True
+            if(cx not in ([cx.lane.outLet] + cx.lane.inLets)):return True
+            laneRaise = wireRaise = True
+            if(cx == cx.lane.outLet ):laneRaise = False
+            if(cx in cx.lane.inLets ):laneRaise = False
+            if(cx in cx.wire.outLets):wireRaise = False
+            if(cx == cx.wire.inLet  ):wireRaise = False
+            if(laneRaise):return True
+            if(wireRaise):return True
+            return False
+
     def _raiseOnInvalid(self,s=""):
         for cx in self.cross:
             if(cx.lane not in self.lanes):
+                breakpoint()
                 raise Exception(f"(2026-09-11T20:04:35) {s} {cx} Can't find {cx.lane} in lanes")
             if(cx.wire not in self.wires):
+                breakpoint()
                 raise Exception(f"(2026-09-11T20:05:05) {s} {cx} Can't find {cx.wire} in wires")
             if(cx not in ([cx.wire.inLet] + cx.wire.outLets)):
+                breakpoint()
                 raise Exception(f"(2026-09-11T20:15:19) {s} {cx} Can't find {cx.wire} in wires rev")
             if(cx not in ([cx.lane.outLet] + cx.lane.inLets)):
+                breakpoint()
                 raise Exception(f"(2026-09-11T20:15:47) {s} {cx} Can't find {cx.lane} in lanes rev")
+            laneRaise = wireRaise = True
+            if(cx == cx.lane.outLet ):laneRaise = False
+            if(cx in cx.lane.inLets ):laneRaise = False
+            if(cx in cx.wire.outLets):wireRaise = False
+            if(cx == cx.wire.inLet  ):wireRaise = False
+            if(laneRaise):
+                breakpoint()
+                raise Exception(f"(2026-09-21T17:14:18) {s} {cx} Connection not in lane {cx.lane}")
+            if(wireRaise):
+                breakpoint()
+                raise Exception(f"(2026-09-21T17:14:18) {s} {cx} Connection not in wire {cx.wire}")
+        for wr in self.wires:
+            if(wr.inLet is not None and wr.inLet.wire != wr):
+                raise Exception(f"(2026-09-22T11:08:39) {s} {wr} {wr.inLet} not the same!")
+            for cx in wr.outLets:
+                if(cx.wire != wr):
+                    raise Exception(f"(2026-09-22T11:25:00) {s} {wr} {cx} list not the same!")
+        for ln in self.lanes:
+            if(ln.outLet.lane != ln):
+                raise Exception(f"(2026-09-22T11:26:39) {s} {ln} {ln.outLet}")
+            for cx in ln.inLets:
+                if(cx.lane != ln):
+                    raise Exception(f"(2026-09-22T11:25:00) {s} {ln} {cx} list not the same!")
 
     def reduceConnections(self) -> bool:
         didChange = False
@@ -350,6 +393,7 @@ class Module:
                 didChange = True
                 _PrintWarning(f"Found wire with zero inlets! {wir.name}\n" +
                                 f"{wir.token.showWhere()}")
+                self._raiseOnInvalid(f"{wir} | ")
                 continue
             if(len(wir.outLets) == 0):
                 _PrintWarning(f"removing wire {wir.name}")
@@ -361,7 +405,9 @@ class Module:
                 self.lanes.remove(lanR)
                 self.wires.remove(wir)
                 didChange = True
+                self._raiseOnInvalid(f"{wir} | ")
                 continue
+        self._raiseOnInvalid(f" | ")
         for lan in self.lanes.copy():
             #if(lan.isIO):continue
             if(len(lan.inLets) == 0):
@@ -376,23 +422,35 @@ class Module:
                 print(f"{lan}\n" + 
                       f"{lan.token.showWhere()}")
                 print(f"{lan.inLets[0].wire.inLet.lane}")
-                if(not lan.inLets[0].wire.isIO):
+                ilw = lan.inLets[0].wire
+                olw = lan.outLet.wire
+                if(not ilw.isIO):
                     # TODO
-                    owir = lan.inLets[0].wire
-                    tw = lan.outLet.wire
-                    inv2 = owir.inLet.invert != invert
-                    owir.inLet.invert = inv2
-                    owir.inLet.wire = tw # Error?
-                    tw.inLet = owir.inLet
-                    #
-                    self.cross.remove(lan.inLets[0].delete())
-                    self.cross.remove(lan.outLet.delete())
-                    #owir.inLet.wire.inLet = owir.inLet
-                    self.lanes.remove(lan)
-                    self.wires.remove(owir)
-                    didChange = True
-                    self._raiseOnInvalid(f"{lan} {owir} {tw} | ")
-                elif(not lan.outLet.wire.isIO):
+                    c1 = lan.inLets[0]
+                    c2 = lan.outLet
+                    c3 = ilw.inLet
+                    if(c2.wire != c3.wire and len(ilw.outLets) == 1):
+                        inv2 = ilw.inLet.invert != invert
+                        self._raiseOnInvalid(f"{lan} {ilw} {olw} | ")
+                        if(DO_FORCE_CHECK):
+                            print("\n(2026-09-21T23:01:44)")
+                            print(f" {olw} {ilw}")
+                            print(f" {c1} {c2} {c3}")
+                        olw.inLet = ilw.inLet
+                        ilw.inLet.invert = inv2
+                        ilw.inLet.wire = olw # Error?
+                        #
+                        self.cross.remove(lan.inLets[0].delete())
+                        self.cross.remove(lan.outLet.delete())
+                        #owir.inLet.wire.inLet = owir.inLet
+                        self.lanes.remove(lan)
+                        self.wires.remove(ilw)
+                        if(DO_FORCE_CHECK):
+                            print(f" {olw} {ilw}")
+                            print(f" {c1} {c2} {c3}")
+                        didChange = True
+                        self._raiseOnInvalid(f"{lan} {ilw} {olw} | ")
+                elif(not olw.isIO):
                     owir = lan.outLet.wire
                     for cx in owir.outLets:
                         cx.wire = lan.inLets[0].wire
@@ -403,6 +461,7 @@ class Module:
                     self.lanes.remove(lan)
                     self.wires.remove(owir)
                     didChange = True
+                    self._raiseOnInvalid(f"{lan} {owir} | ")
             for lan2 in self.lanes:
                 if(lan is lan2):continue
                 usedWires = lan2.inLets.copy()
