@@ -294,22 +294,25 @@ class WireVia:
         cost += vCost * 3
         return cost
 
-    def _writeTreeBranch(self,reg,strength,layer,dirUp=False,dirDown=False) -> int:
+    def _writeTreeBranch(self,reg,layer,dirUp=False,dirDown=False):# -> int:
         sw = self.getIfLayer(layer)
         if(sw is None):return
         startl = self.lane
         ly4 = layer * 4
         lw3 = self.wire * 3
-        strengthl = strength
-        if(self.inLet is not None):
+        #strengthl = strength
+        #ln = startl + strengthl // 3
+        if(self.inLane is not None):
+            if(self.inLane.layer == layer):
+                startl = self.inLane.lane
+                #ln = startl + strengthl // 3
+        elif(self.inLet is not None):
             if(self.inLet.layer == layer):
                 startl = self.inLet.laneVia.lane
                 strengthl = (3 - (abs(self.lane - startl) % 4)) * 3
-        elif(self.inLane is not None):
-            if(self.inLane.layer == layer):
-                startl = self.inLane.lane
+                #ln = 12
         #
-        ln = startl + strengthl // 3
+        ln = startl + 4
         while ln < sw.end:
             if(ln != self.lane):
                 reg[ln * 3,ly4 + 1,lw3] = Blocks.repeatPlusX
@@ -318,7 +321,7 @@ class WireVia:
                 ln += 1
                 continue
             ln += 4
-        ln = startl - strengthl // 3
+        ln = startl - 4
         while ln > sw.start:
             if(ln != self.lane):
                 try:
@@ -332,6 +335,7 @@ class WireVia:
                 continue
             ln -= 4
         ln = self.lane
+        """
         if(dirUp and strengthl < 5):
             reg[ln * 3    ,ly4 + 1,lw3 - 1] = Blocks.redirBlock
             reg[ln * 3    ,ly4 + 2,lw3 - 1] = Blocks.torchUp
@@ -346,9 +350,21 @@ class WireVia:
             reg[ln * 3    ,ly4 - 1,lw3 - 1] = Blocks.baseYBlock
             reg[ln * 3    ,ly4 - 2,lw3 - 1] = Blocks.wireBlock
             reg[ln * 3    ,ly4 - 3,lw3 - 1] = Blocks.baseYBlock
-        if(strengthl <= 0):
-            return 12
-        return strengthl - 4
+        """
+        if(dirUp):
+            reg[ln * 3    ,ly4 + 1,lw3 - 1] = Blocks.redirBlock
+            reg[ln * 3    ,ly4 + 2,lw3 - 1] = Blocks.torchUp
+            reg[ln * 3    ,ly4 + 3,lw3 - 1] = Blocks.baseYBlock
+            reg[ln * 3    ,ly4 + 4,lw3 - 1] = Blocks.torchUp
+            reg[ln * 3    ,ly4 + 5,lw3 - 1] = Blocks.baseYBlock
+        if(dirDown):
+            reg[ln * 3    ,ly4    ,lw3 + 1] = Blocks.torchPlusZ
+            reg[ln * 3    ,ly4 - 1,lw3 + 1] = Blocks.wireBlock
+            reg[ln * 3    ,ly4 - 2,lw3 + 1] = Blocks.baseYBlock
+            reg[ln * 3    ,ly4 - 2,lw3    ] = Blocks.torchMinusZ
+            reg[ln * 3    ,ly4 - 3,lw3    ] = Blocks.wireBlock
+            reg[ln * 3    ,ly4 - 4,lw3    ] = Blocks.baseXBlock
+        return 12
 
 
     def writeTree(self,reg):
@@ -356,13 +372,15 @@ class WireVia:
         if(self.inLet is not None):startY = self.inLet.layer
         elif(self.inLane is not None):startY = self.inLane.layer
         layer = startY
-        stren = self._writeTreeBranch(reg,12,startY,
+        stren = self._writeTreeBranch(reg,startY,#12,startY,
                                       layer < self.end,layer > self.start)
-        carS = stren
+        #carS = stren
         for layer in range(startY + 1,self.end   + 1, 1):
-            carS = self._writeTreeBranch(reg,carS,layer,layer < self.end,False)
+            #carS = self._writeTreeBranch(reg,carS,layer,layer < self.end,False)
+            self._writeTreeBranch(reg,layer,layer < self.end,False)
         for layer in range(startY - 1,self.start - 1,-1):
-            carS = self._writeTreeBranch(reg,carS,layer,False,layer > self.start)
+            #carS = self._writeTreeBranch(reg,carS,layer,False,layer > self.start)
+            self._writeTreeBranch(reg,layer,False,layer > self.start)
 
 
 
@@ -378,6 +396,7 @@ class WireVia:
             except Exception as e:
                 print(layer,x,ww3,subW.start,subW.end)
                 raise e
+        """
         for layer in range(self.start,self.end):
             reg[wl3    ,layer * 4    ,ww3    ] = Blocks.baseYBlock
             reg[wl3 + 1,layer * 4 + 1,ww3    ] = Blocks.baseYBlock
@@ -387,6 +406,7 @@ class WireVia:
             reg[wl3 + 1,layer * 4 + 2,ww3    ] = Blocks.wireBlock
             reg[wl3 + 1,layer * 4 + 3,ww3 + 1] = Blocks.wireBlock
             reg[wl3    ,layer * 4 + 4,ww3 + 1] = Blocks.wireBlock
+        """
         ol = self.inLane or self.outLane
         ow = self.inWire or self.outWire
         if(ol is None):
@@ -395,18 +415,21 @@ class WireVia:
         ol3 = ol.lane * 3
         ow3 = ol.wire * 3
         ly4   = ol.layer * 4
-        for z in range(ol.start * 3 + 1,ol.end * 3):
+        if(self.outLane is not None):reg[ol3 + 1,ly4 + 1,self.wire * 3] = Blocks.repeatMinusX
+        if(self.inLane  is not None):reg[ol3 + 1,ly4 + 1,self.wire * 3] = Blocks.repeatPlusX
+        for z in range(ol.start * 3 + 2,ol.end * 3 - 1):
             if(reg[ol3,ly4 + 2,z].id != "minecraft:air"):continue
             reg[ol3,ly4 + 2,z] = Blocks.baseZBlock
             if(reg[ol3,ly4 + 3,z].id != "minecraft:air"):continue
             reg[ol3,ly4 + 3,z] = Blocks.wireBlock
-        reg[ol3,ly4 + 1,ol.start * 3] = Blocks.baseBlock
-        reg[ol3,ly4 + 2,ol.start * 3] = Blocks.wireBlock
-        reg[ol3,ly4 + 1,ol.end   * 3] = Blocks.baseBlock
-        reg[ol3,ly4 + 2,ol.end   * 3] = Blocks.wireBlock
-        reg[ow.end * 3,ly4 + 1,ow3] = Blocks.baseBlock
-        reg[ow.end * 3,ly4 + 2,ow3] = Blocks.wireBlock
-        for x in range(ow.start * 3,ow.end * 3):
+        if(ol.start != ol.end):
+            reg[ol3,ly4 + 1,ol.start * 3 + 1] = Blocks.baseBlock
+            reg[ol3,ly4 + 2,ol.start * 3 + 1] = Blocks.wireBlock
+            reg[ol3,ly4 + 1,ol.end   * 3 - 1] = Blocks.baseBlock
+            reg[ol3,ly4 + 2,ol.end   * 3 - 1] = Blocks.wireBlock
+        #reg[ow.end * 3,ly4 + 1,ow3] = Blocks.baseBlock
+        #reg[ow.end * 3,ly4 + 2,ow3] = Blocks.wireBlock
+        for x in range(ow.start * 3,ow.end * 3 + 1):
             if(reg[x,ly4    ,ow3].id != "minecraft:air"):continue
             reg[x,ly4    ,ow3] = Blocks.baseXBlock
             if(reg[x,ly4 + 1,ow3].id != "minecraft:air"):continue
@@ -482,6 +505,7 @@ class LaneVia:
             for z in range(subL.start * 3,subL.end * 3 + 1):
                 reg[ll3,ly4 + 2,z] = Blocks.baseZBlock
                 reg[ll3,ly4 + 3,z] = Blocks.wireBlock
+        """
         for layer in range(self.start,self.end):
             reg[ll3    ,layer * 4 + 2,lw3    ] = Blocks.baseYBlock
             reg[ll3 + 1,layer * 4 + 3,lw3    ] = Blocks.baseYBlock
@@ -491,6 +515,21 @@ class LaneVia:
             reg[ll3 + 1,layer * 4 + 4,lw3    ] = Blocks.wireBlock
             reg[ll3 + 1,layer * 4 + 5,lw3 + 1] = Blocks.wireBlock
             reg[ll3    ,layer * 4 + 6,lw3 + 1] = Blocks.wireBlock
+        """
+        olay = self.outLet.layer
+        for layer in range(olay,self.end):
+            reg[ll3 + 1,layer * 4 + 6,lw3    ] = Blocks.torchPlusX
+            reg[ll3 + 1,layer * 4 + 5,lw3    ] = Blocks.wireBlock
+            reg[ll3 + 1,layer * 4 + 4,lw3    ] = Blocks.baseYBlock
+            reg[ll3    ,layer * 4 + 4,lw3    ] = Blocks.torchMinusX
+            reg[ll3    ,layer * 4 + 3,lw3    ] = Blocks.wireBlock
+            reg[ll3    ,layer * 4 + 2,lw3    ] = Blocks.baseZBlock
+        for layer in range(self.start,olay):
+            reg[ll3 - 1,layer * 4 + 3,lw3    ] = Blocks.redirBlock
+            reg[ll3 - 1,layer * 4 + 4,lw3    ] = Blocks.torchUp
+            reg[ll3 - 1,layer * 4 + 5,lw3    ] = Blocks.baseYBlock
+            reg[ll3 - 1,layer * 4 + 6,lw3    ] = Blocks.torchUp
+            reg[ll3 - 1,layer * 4 + 7,lw3    ] = Blocks.baseYBlock
 
 
     def __str__(self):
@@ -842,7 +881,7 @@ class Module:
         oldW = lv.wire
         oldL = lv.lane
         for _ in range(TRYS):
-            lv.wire = random.randrange(0,oldW + OVER_MAX)
+            lv.wire = random.randrange(1,oldW + OVER_MAX)
             lv.lane = random.randrange(1,oldL + OVER_MAX)
             newC = self.getCostDiffLaneV(lv)
             if newC.testLt(temp,baseC):return True
@@ -852,7 +891,7 @@ class Module:
             newC = self.getCostDiffLaneV(lv)
             if newC.testLt(temp,baseC):return True
         lv.lane = oldL
-        for wir in range(0,oldW + OVER_MAX):
+        for wir in range(1,oldW + OVER_MAX):
             lv.wire = wir
             newC = self.getCostDiffLaneV(lv)
             if newC.testLt(temp,baseC):return True
@@ -866,7 +905,7 @@ class Module:
         oldW = wv.wire
         oldL = wv.lane
         for _ in range(TRYS):
-            wv.wire = random.randrange(0,oldW + OVER_MAX)
+            wv.wire = random.randrange(1,oldW + OVER_MAX)
             wv.lane = random.randrange(1,oldL + OVER_MAX)
             newC = self.getCostDiffWireV(wv)
             if newC.testLt(temp,baseC):return True
@@ -876,7 +915,7 @@ class Module:
             newC = self.getCostDiffWireV(wv)
             if newC.testLt(temp,baseC):return True
         wv.lane = oldL
-        for wir in range(0,oldW + OVER_MAX):
+        for wir in range(1,oldW + OVER_MAX):
             wv.wire = wir
             newC = self.getCostDiffWireV(wv)
             if newC.testLt(temp,baseC):return True
@@ -902,9 +941,9 @@ class Module:
         lanL = cx.laneVia.lane
         oldY = cx.layer
         for _ in range(TRYS):
-            cx.wireVia.wire = random.randrange(0,wirW + OVER_MAX)
+            cx.wireVia.wire = random.randrange(1,wirW + OVER_MAX)
             cx.wireVia.lane = random.randrange(1,wirL + OVER_MAX)
-            cx.laneVia.wire = random.randrange(0,lanW + OVER_MAX)
+            cx.laneVia.wire = random.randrange(1,lanW + OVER_MAX)
             cx.laneVia.lane = random.randrange(1,lanL + OVER_MAX)
             cx.layer        = random.randrange(0,oldY + OVER_MAX)
             newC = self.getCostDiffCross(cx)
@@ -912,7 +951,7 @@ class Module:
         cx.wireVia.lane = wirL
         cx.laneVia.wire = lanW
         for _ in range(TRYS):
-            cx.wireVia.wire = random.randrange(0,wirW + OVER_MAX)
+            cx.wireVia.wire = random.randrange(1,wirW + OVER_MAX)
             cx.laneVia.lane = random.randrange(1,lanL + OVER_MAX)
             cx.layer        = random.randrange(0,oldY + OVER_MAX)
             newC = self.getCostDiffCross(cx)
