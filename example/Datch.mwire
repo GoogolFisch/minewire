@@ -1,0 +1,20 @@
+
+component D-latch (clk,d) (sto) (
+	setHigh = clk&d
+	setLow  = clk&~d
+	sto = ~(nto|setHigh)
+	nto = ~(sto|setLow )
+)
+module 2-1-multiplex (sel,a,b) (out) (
+	posA = a&sel
+	posB = b&~sel
+	out = posA|posB
+)
+component multiplex-clk (sel,a,b,clk) (out) (
+	@2-1-multiplex(sel,a,b)(plexed)
+	@D-latch(clk,plexed)(out)
+)
+module main (sel:2,a:2,b:2,clk) (data:2) (
+	@multiplex-clk(sel:0,a:0,b:0,clk) (data:0)
+	@multiplex-clk(sel:1,a:1,b:1,clk) (data:1)
+)

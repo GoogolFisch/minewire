@@ -1,0 +1,31 @@
+{
+	"minecraft":{
+		"blocks":{
+			"baseBlock" :{"_id":"minecraft:green_terracotta"},
+			// "baseBlock":{"_id":"minecraft:redstone_lamp"},
+			"upBlock"   :{"_id":"minecraft:oak_slab","type":"top"},
+			// "upBlock":{"_id":"minecraft:glass"},
+			"wireBlock" :{"_id":"minecraft:redstone_wire"},
+			"redirBlock":{"_id":"minecraft:target"},
+
+			"torchUp"    :{"_id":"minecraft:redstone_torch"},
+			"torchMinusX":{"_id":"minecraft:redstone_wall_torch","facing":"west"},
+			"torchPlusX" :{"_id":"minecraft:redstone_wall_torch","facing":"east"},
+
+			"repeatMinusX":{"_id":"minecraft:repeater","facing":"east"},
+			"repeatPlusX" :{"_id":"minecraft:repeater","facing":"west"},
+			"repeatMinusZ":{"_id":"minecraft:repeater","facing":"south"},
+			"repeatPlusZ" :{"_id":"minecraft:repeater","facing":"north"}
+		},
+		"mc-schematic":{
+			"name"       :"Computational MineWire",
+			"author"     :"MineWire",
+			"description":"MineWire generated",
+			"output"     :"./output.litematic",
+			"maxY"       :64
+		}
+	},
+	"library":"./example/",
+	"input"  :"./example/D-latch.mwire",
+	"type"   :"litema"
+}

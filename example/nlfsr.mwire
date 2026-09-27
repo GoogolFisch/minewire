@@ -1,0 +1,45 @@
+
+set (WORD_SIZE = 8)
+
+component xor (a,b) (out) (
+	part1 = ~a&b
+	part2 = ~a&b
+	out = part1 | part2
+)
+
+component D-latch (clk,d) (sto) (
+	enable  = clk&d
+	disable = clk&~d
+	sto = ~(nto|enable )
+	nto = ~(sto|disable)
+)
+
+; (142, 127) 0b10001110 0b1111111
+
+module main (pos-clk,neg-clk) (outp) (
+	repeat (N,0,WORD_SIZE) (
+		@D-latch(neg-clk,pos-feedback:N)(neg-feedback:N)
+	)
+
+	@D-latch(pos-clk,neg-feedback:0)(pos-feedback:1)
+	@D-latch(pos-clk,neg-feedback:1)(pos-feedback:2)
+	@D-latch(pos-clk,neg-feedback:2)(pos-feedback:3)
+	@D-latch(pos-clk,neg-feedback:3)(pos-feedback:4)
+	@D-latch(pos-clk,neg-feedback:4)(pos-feedback:5)
+	@D-latch(pos-clk,neg-feedback:5)(pos-feedback:6)
+	@D-latch(pos-clk,neg-feedback:6)(pos-feedback:7)
+
+	andNet = neg-feedback:0 & neg-feedback:1 & 
+		neg-feedback:2 & neg-feedback:3 & 
+		neg-feedback:4 & neg-feedback:5 & 
+		neg-feedback:6
+	@xor(andNet,neg-feedback:7)(nlfsr-xor_0)
+
+	@xor(neg-feedback:1,neg-feedback:2)(nlfsr-xor_1)
+	@xor(neg-feedback:3,nlfsr-xor_0)(nlfsr-xor_2)
+
+	@xor(nlfsr-xor_1,nlfsr-xor_2)(pos-feedback:0)
+
+	; output signal
+	outp = pos-feedback:7
+)

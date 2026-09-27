@@ -1,3 +1,6 @@
 
-github.com/SmylerMC/litemapy
+# https://github.com/SmylerMC/litemapy
 pip install litemapy
+
+# https://github.com/NickolaiBeloguzov/jsonc-parser/
+pip install jsonc-parser
