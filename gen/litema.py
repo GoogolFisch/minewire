@@ -294,30 +294,24 @@ class WireVia:
         cost += vCost * 3
         return cost
 
-    def _writeTreeBranch(self,reg,layer,dirUp=False,dirDown=False):# -> int:
+    def _writeTreeBranch(self,reg,layer):
         sw = self.getIfLayer(layer)
         if(sw is None):return
         startl = self.lane
         ly4 = layer * 4
         lw3 = self.wire * 3
-        #strengthl = strength
-        #ln = startl + strengthl // 3
         if(self.inLane is not None):
             if(self.inLane.layer == layer):
                 startl = self.inLane.lane
-                #ln = startl + strengthl // 3
         elif(self.inLet is not None):
             if(self.inLet.layer == layer):
                 startl = self.inLet.laneVia.lane
-                strengthl = (3 - (abs(self.lane - startl) % 4)) * 3
-                #ln = 12
         #
         ln = startl + 4
         while ln < sw.end:
             if(ln != self.lane):
                 reg[ln * 3,ly4 + 1,lw3] = Blocks.repeatPlusX
             else:
-                strengthl = 0
                 ln += 1
                 continue
             ln += 4
@@ -330,40 +324,9 @@ class WireVia:
                     print(ln * 3,ly4 + 1,lw3)
                     raise e
             else:
-                strengthl = 0
                 ln -= 1
                 continue
             ln -= 4
-        ln = self.lane
-        """
-        if(dirUp and strengthl < 5):
-            reg[ln * 3    ,ly4 + 1,lw3 - 1] = Blocks.redirBlock
-            reg[ln * 3    ,ly4 + 2,lw3 - 1] = Blocks.torchUp
-            reg[ln * 3    ,ly4 + 3,lw3 - 1] = Blocks.baseYBlock
-            reg[ln * 3    ,ly4 + 4,lw3 - 1] = Blocks.torchUp
-            reg[ln * 3    ,ly4 + 5,lw3 - 1] = Blocks.baseYBlock
-            reg[ln * 3    ,ly4 + 4,lw3 + 1] = Blocks.airBlock
-        if(dirDown and strengthl < 6):
-            reg[ln * 3    ,ly4 - 1,lw3    ] = Blocks.repeatMinusZ
-            reg[ln * 3    ,ly4 - 2,lw3    ] = Blocks.upBlock
-            reg[ln * 3 + 1,ly4 - 2,lw3    ] = Blocks.airBlock
-            reg[ln * 3    ,ly4 - 1,lw3 - 1] = Blocks.baseYBlock
-            reg[ln * 3    ,ly4 - 2,lw3 - 1] = Blocks.wireBlock
-            reg[ln * 3    ,ly4 - 3,lw3 - 1] = Blocks.baseYBlock
-        """
-        if(dirUp):
-            reg[ln * 3    ,ly4 + 1,lw3 - 1] = Blocks.redirBlock
-            reg[ln * 3    ,ly4 + 2,lw3 - 1] = Blocks.torchUp
-            reg[ln * 3    ,ly4 + 3,lw3 - 1] = Blocks.baseYBlock
-            reg[ln * 3    ,ly4 + 4,lw3 - 1] = Blocks.torchUp
-            reg[ln * 3    ,ly4 + 5,lw3 - 1] = Blocks.baseYBlock
-        if(dirDown):
-            reg[ln * 3    ,ly4    ,lw3 + 1] = Blocks.torchPlusZ
-            reg[ln * 3    ,ly4 - 1,lw3 + 1] = Blocks.wireBlock
-            reg[ln * 3    ,ly4 - 2,lw3 + 1] = Blocks.baseYBlock
-            reg[ln * 3    ,ly4 - 2,lw3    ] = Blocks.torchMinusZ
-            reg[ln * 3    ,ly4 - 3,lw3    ] = Blocks.wireBlock
-            reg[ln * 3    ,ly4 - 4,lw3    ] = Blocks.baseXBlock
         return 12
 
 
@@ -371,16 +334,41 @@ class WireVia:
         startY = self.start
         if(self.inLet is not None):startY = self.inLet.layer
         elif(self.inLane is not None):startY = self.inLane.layer
-        layer = startY
-        stren = self._writeTreeBranch(reg,startY,#12,startY,
-                                      layer < self.end,layer > self.start)
-        #carS = stren
-        for layer in range(startY + 1,self.end   + 1, 1):
-            #carS = self._writeTreeBranch(reg,carS,layer,layer < self.end,False)
-            self._writeTreeBranch(reg,layer,layer < self.end,False)
-        for layer in range(startY - 1,self.start - 1,-1):
-            #carS = self._writeTreeBranch(reg,carS,layer,False,layer > self.start)
-            self._writeTreeBranch(reg,layer,False,layer > self.start)
+        for layer in range(self.start,self.end + 1):
+            self._writeTreeBranch(reg,layer)
+        #if(self.inWire.wire ):pass
+        pdir = False
+        if(self.inLane is not None):
+            if(self.inLane.wire == self.wire):return
+            pdir = self.inLane.wire < self.wire
+        elif(self.outLane is not None):
+            if(self.outLane.wire == self.wire):return
+            pdir = self.outLane.wire > self.wire
+        else:return
+        print("Hello")
+        lan = self.inLane or self.outLane
+        sign = (lan.wire > lan.parent.wire) * 2 - 1
+        repSign = pdir and Blocks.repeatPlusZ or Blocks.repeatMinusZ
+        dz = lan.parent.wire + sign
+        count = 4
+        ly4 = lan.layer * 4
+        while dz != lan.wire:
+            if(count >= 3):
+                reg[lan.lane * 3,ly4 + 3,dz * 3] = repSign
+                #print(lan.lane,lan.layer,dz)
+                count = 0
+            else:count += 1
+            dz += sign
+        repSign = self.inLane and Blocks.repeatPlusX or Blocks.repeatMinusX
+        dx = lan.lane - 1
+        count += 1
+        while dx > 0:
+            if(count >= 3):
+                reg[dx * 3,ly4 + 1,lan.wire * 3] = repSign
+                #print(dx,lan.layer,lan.wire)
+                count = 0
+            else:count += 1
+            dx -= 1
 
 
 
@@ -396,17 +384,20 @@ class WireVia:
             except Exception as e:
                 print(layer,x,ww3,subW.start,subW.end)
                 raise e
-        """
-        for layer in range(self.start,self.end):
-            reg[wl3    ,layer * 4    ,ww3    ] = Blocks.baseYBlock
-            reg[wl3 + 1,layer * 4 + 1,ww3    ] = Blocks.baseYBlock
-            reg[wl3 + 1,layer * 4 + 2,ww3 + 1] = Blocks.baseYBlock
-            reg[wl3    ,layer * 4 + 3,ww3 + 1] = Blocks.baseYBlock
-            reg[wl3    ,layer * 4 + 1,ww3    ] = Blocks.wireBlock
-            reg[wl3 + 1,layer * 4 + 2,ww3    ] = Blocks.wireBlock
-            reg[wl3 + 1,layer * 4 + 3,ww3 + 1] = Blocks.wireBlock
-            reg[wl3    ,layer * 4 + 4,ww3 + 1] = Blocks.wireBlock
-        """
+        olay = self.inLet or self.inLane
+        if(olay is not None):
+            olay = olay.layer
+            for layer in range(olay,self.end):
+                reg[wl3    ,layer * 4 + 1,ww3 + 1] = Blocks.redirBlock
+                reg[wl3    ,layer * 4 + 2,ww3 + 1] = Blocks.torchUp
+                reg[wl3    ,layer * 4 + 3,ww3 + 1] = Blocks.baseYBlock
+                reg[wl3    ,layer * 4 + 4,ww3 + 1] = Blocks.torchUp
+                reg[wl3    ,layer * 4 + 5,ww3 + 1] = Blocks.baseYBlock
+            for layer in range(self.start,olay):
+                reg[wl3    ,layer * 4 + 4,ww3 - 1] = Blocks.torchMinusZ
+                reg[wl3    ,layer * 4 + 3,ww3 - 1] = Blocks.wireBlock
+                reg[wl3    ,layer * 4 + 2,ww3 - 1] = Blocks.baseYBlock
+                reg[wl3    ,layer * 4 + 2,ww3    ] = Blocks.torchPlusZ
         ol = self.inLane or self.outLane
         ow = self.inWire or self.outWire
         if(ol is None):
@@ -496,6 +487,61 @@ class LaneVia:
         cost += vCost * 3
         return cost
 
+    def _writeTreeBranch(self,reg,layer):
+        sl = self.getIfLayer(layer)
+        if(sl is None):return
+        startw = self.wire
+        ly4 = layer * 4
+        wl3 = self.lane * 3
+        if(self.outLet.layer == layer):
+            startw = self.outLet.wireVia.wire
+        #
+        count = 0
+        wr = startw + 1
+        while wr <= sl.end:
+            if(wr != self.wire):
+                for cx in self.inLets:
+                    if(cx.layer != layer):continue
+                    if(cx.wireVia.wire != wr):continue
+                    if(cx.invert):continue
+                    reg[wl3,ly4 + 3,wr * 3 - 1] = Blocks.repeatMinusZ
+                    count = 0
+                    break
+                else:
+                    if(count >= 3):
+                        reg[wl3,ly4 + 3,wr * 3] = Blocks.repeatMinusZ
+                        count = -1
+                    count += 1
+            else:
+                wr += 1
+                continue
+            wr += 1
+        wr = startw - 1
+        while wr >= sl.start:
+            if(wr != self.wire):
+                for cx in self.inLets:
+                    if(cx.layer != layer):continue
+                    if(cx.wireVia.wire != wr):continue
+                    if(cx.invert):continue
+                    reg[wl3,ly4 + 3,wr * 3 + 1] = Blocks.repeatPlusZ
+                    count = 0
+                    break
+                else:
+                    if(count >= 3):
+                        reg[wl3,ly4 + 3,wr * 3] = Blocks.repeatPlusZ
+                        count = -1
+                    count += 1
+            else:
+                wr -= 1
+                continue
+            wr -= 1
+        return 12
+
+    def writeTree(self,reg):
+        startY = self.outLet.layer
+        for layer in range(self.start,self.end + 1):
+            self._writeTreeBranch(reg,layer)
+
     def write(self,reg):
         ll3 = self.lane * 3
         lw3 = self.wire * 3
@@ -505,17 +551,6 @@ class LaneVia:
             for z in range(subL.start * 3,subL.end * 3 + 1):
                 reg[ll3,ly4 + 2,z] = Blocks.baseZBlock
                 reg[ll3,ly4 + 3,z] = Blocks.wireBlock
-        """
-        for layer in range(self.start,self.end):
-            reg[ll3    ,layer * 4 + 2,lw3    ] = Blocks.baseYBlock
-            reg[ll3 + 1,layer * 4 + 3,lw3    ] = Blocks.baseYBlock
-            reg[ll3 + 1,layer * 4 + 4,lw3 + 1] = Blocks.baseYBlock
-            reg[ll3    ,layer * 4 + 5,lw3 + 1] = Blocks.baseYBlock
-            reg[ll3    ,layer * 4 + 3,lw3    ] = Blocks.wireBlock
-            reg[ll3 + 1,layer * 4 + 4,lw3    ] = Blocks.wireBlock
-            reg[ll3 + 1,layer * 4 + 5,lw3 + 1] = Blocks.wireBlock
-            reg[ll3    ,layer * 4 + 6,lw3 + 1] = Blocks.wireBlock
-        """
         olay = self.outLet.layer
         for layer in range(olay,self.end):
             reg[ll3 + 1,layer * 4 + 6,lw3    ] = Blocks.torchPlusX
@@ -530,6 +565,7 @@ class LaneVia:
             reg[ll3 - 1,layer * 4 + 5,lw3    ] = Blocks.baseYBlock
             reg[ll3 - 1,layer * 4 + 6,lw3    ] = Blocks.torchUp
             reg[ll3 - 1,layer * 4 + 7,lw3    ] = Blocks.baseYBlock
+        self.writeTree(reg)
 
 
     def __str__(self):
