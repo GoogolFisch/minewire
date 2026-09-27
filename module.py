@@ -185,12 +185,15 @@ class Module:
                 ilan = Lane(token)
                 wout = self.maybeAddWire(getRandName(),token)
                 self.lanes.append(ilan)
+                print(w)
                 cx = Connection(token,w,ilan,True,True)
                 self.cross.append(cx)
                 cx.insert()
+                print(cx)
                 cx = Connection(token,wout,ilan,False,False)
                 self.cross.append(cx)
                 cx.insert()
+                print(cx)
                 return wout
             return w
         """if(token.typ == "word"):
@@ -213,8 +216,10 @@ class Module:
         outWire = self.maybeAddWire(getRandName(),token)
         for subToken in token.lst:
             fetchWire = self.parseToken(subToken,remap)
-            subInvert = inverting != subToken.invert
+            subInvert = inverting# != subToken.invert
             let = Connection(subToken,fetchWire,lan,True,subInvert)
+            print(let)
+            print(f"(2026-09-27T18:30:20) {subToken} {subToken.invert} {subInvert}")
             let.insert()
             self.cross.append(let)
         #

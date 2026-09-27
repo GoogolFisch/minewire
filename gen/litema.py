@@ -406,9 +406,9 @@ class WireVia:
             return
         ol3 = ol.lane * 3
         ow3 = ol.wire * 3
-        ly4   = ol.layer * 4
-        if(self.outLane is not None):reg[ol3 + 1,ly4 + 1,self.wire * 3] = Blocks.repeatMinusX
-        if(self.inLane  is not None):reg[ol3 + 1,ly4 + 1,self.wire * 3] = Blocks.repeatPlusX
+        ly4 = ol.layer * 4
+        #if(self.outLane is not None):reg[ol3 + 1,ly4 + 1,self.wire * 3] = Blocks.repeatMinusX
+        #if(self.inLane  is not None):reg[ol3 + 1,ly4 + 1,self.wire * 3] = Blocks.repeatPlusX
         for z in range(ol.start * 3 + 2,ol.end * 3 - 1):
             if(reg[ol3,ly4 + 2,z].id != "minecraft:air"):continue
             reg[ol3,ly4 + 2,z] = Blocks.baseZBlock
@@ -728,10 +728,14 @@ class Module:
                         collisions.append(("(2026-09-10T18:54:46)",wireV,lv,sl,subW))
                         break
         if(wireV.inLane is not None):
+            if(wireV.inLane.lane == wireV.lane):
+                collisions.append(("(2026-09-27T19:02:25)",wireV,wireV.inLane))
             c = self.laneCollide(wireV.inLane,wireV.inLane.layer)
             collisions += c
             #print(c)
         if(wireV.outLane is not None):
+            if(wireV.outLane.lane == wireV.lane):
+                collisions.append(("(2026-09-27T19:02:25)",wireV,wireV.outLane))
             c = self.laneCollide(wireV.outLane,wireV.outLane.layer)
             collisions += c
             #print(c)
