@@ -5,12 +5,13 @@ try:
 except:
     from util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver
 
+import time
 from litemapy import Region, BlockState, Schematic
 import random
 
 DO_FORCE_CHECK = False
 TRYS = 100
-OVER_MAX = 8
+OVER_MAX = 64
 
 laneCounter = 2
 def monotonicLaneCounter(jump=-1):
@@ -916,18 +917,22 @@ class Module:
         baseC = self.getCostDiffLaneV(lv)
         oldW = lv.wire
         oldL = lv.lane
+        minW = max(     1,oldW - OVER_MAX)
+        minL = max(     1,oldL - OVER_MAX)
+        maxW = min(999999,oldW + OVER_MAX)
+        maxL = min(999999,oldL + OVER_MAX)
         for _ in range(TRYS):
-            lv.wire = random.randrange(1,oldW + OVER_MAX)
-            lv.lane = random.randrange(1,oldL + OVER_MAX)
+            lv.wire = random.randrange(minW,maxW)
+            lv.lane = random.randrange(minL,maxL)
             newC = self.getCostDiffLaneV(lv)
             if newC.testLt(temp,baseC):return True
         lv.wire = oldW
-        for lan in range(1,oldL + OVER_MAX):
+        for lan in range(minL,maxL):
             lv.lane = lan
             newC = self.getCostDiffLaneV(lv)
             if newC.testLt(temp,baseC):return True
         lv.lane = oldL
-        for wir in range(1,oldW + OVER_MAX):
+        for wir in range(minW,maxW):
             lv.wire = wir
             newC = self.getCostDiffLaneV(lv)
             if newC.testLt(temp,baseC):return True
@@ -940,18 +945,22 @@ class Module:
         baseC = self.getCostDiffWireV(wv)
         oldW = wv.wire
         oldL = wv.lane
+        minW = max(     1,oldW - OVER_MAX)
+        minL = max(     1,oldL - OVER_MAX)
+        maxW = min(999999,oldW + OVER_MAX)
+        maxL = min(999999,oldL + OVER_MAX)
         for _ in range(TRYS):
-            wv.wire = random.randrange(1,oldW + OVER_MAX)
-            wv.lane = random.randrange(1,oldL + OVER_MAX)
+            wv.wire = random.randrange(minW,maxW)
+            wv.lane = random.randrange(minL,maxL)
             newC = self.getCostDiffWireV(wv)
             if newC.testLt(temp,baseC):return True
         wv.wire = oldW
-        for lan in range(1,oldL + OVER_MAX):
+        for lan in range(minL,maxL):
             wv.lane = lan
             newC = self.getCostDiffWireV(wv)
             if newC.testLt(temp,baseC):return True
         wv.lane = oldL
-        for wir in range(1,oldW + OVER_MAX):
+        for wir in range(minW,maxW):
             wv.wire = wir
             newC = self.getCostDiffWireV(wv)
             if newC.testLt(temp,baseC):return True
@@ -962,7 +971,7 @@ class Module:
             self.getCostDiffWireV(wv)
             return False
         oldL = ol.lane
-        for lan in range(1,wv.lane):
+        for lan in range(1,wv.lane + 4): # TODO
             ol.lane = lan
             newC = self.getCostDiffWireV(wv)
             if newC.testLt(temp,baseC):return True
@@ -975,20 +984,28 @@ class Module:
         wirL = cx.wireVia.lane
         lanW = cx.laneVia.wire
         lanL = cx.laneVia.lane
+        minWW = max(     1,wirW - OVER_MAX)
+        minWL = max(     1,wirL - OVER_MAX)
+        maxWW = min(999999,wirW + OVER_MAX)
+        maxWL = min(999999,wirL + OVER_MAX)
+        minLW = max(     1,lanW - OVER_MAX)
+        minLL = max(     1,lanL - OVER_MAX)
+        maxLW = min(999999,lanW + OVER_MAX)
+        maxLL = min(999999,lanL + OVER_MAX)
         oldY = cx.layer
         for _ in range(TRYS):
-            cx.wireVia.wire = random.randrange(1,wirW + OVER_MAX)
-            cx.wireVia.lane = random.randrange(1,wirL + OVER_MAX)
-            cx.laneVia.wire = random.randrange(1,lanW + OVER_MAX)
-            cx.laneVia.lane = random.randrange(1,lanL + OVER_MAX)
+            cx.wireVia.wire = random.randrange(minWW,maxWW)
+            cx.wireVia.lane = random.randrange(minWL,maxWL)
+            cx.laneVia.wire = random.randrange(minLW,maxLW)
+            cx.laneVia.lane = random.randrange(minLL,maxLL)
             cx.layer        = random.randrange(0,oldY + OVER_MAX)
             newC = self.getCostDiffCross(cx)
             if newC.testLt(temp,baseC):return True
         cx.wireVia.lane = wirL
         cx.laneVia.wire = lanW
         for _ in range(TRYS):
-            cx.wireVia.wire = random.randrange(1,wirW + OVER_MAX)
-            cx.laneVia.lane = random.randrange(1,lanL + OVER_MAX)
+            cx.wireVia.wire = random.randrange(minWW,maxWW)
+            cx.laneVia.lane = random.randrange(minLL,maxLL)
             cx.layer        = random.randrange(0,oldY + OVER_MAX)
             newC = self.getCostDiffCross(cx)
             if newC.testLt(temp,baseC):return True
@@ -1112,7 +1129,8 @@ class Module:
 
 
 
-def main(settings,module):
+def main(settings,module,timeTable):
+    timeTable.append(time.time())
     safeCurruptBlocks(settings)
     m = module.carbonCopy(Module,WireVia,LaneVia,Connection)
     m.layout()
@@ -1120,6 +1138,7 @@ def main(settings,module):
     temp  = int  (Blocks.temperatur)
     decay = float(Blocks.decay     )
     counter = 0
+    timeTable.append(time.time())
     #while False and m.compact(temp):
     while m.compact(temp):
         temp *= decay
@@ -1128,5 +1147,6 @@ def main(settings,module):
     dim,cost,*_ = m.write()
     print(f"after {counter} steps. Dimension:{dim}")
     print(f"cost:{str(cost)}")
+    timeTable.append(time.time())
 
 

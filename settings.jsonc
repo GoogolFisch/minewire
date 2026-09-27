@@ -22,7 +22,7 @@
 			"author"     :"MineWire",
 			"description":"MineWire generated",
 			"output"     :"./output.litematic",
-			"maxY"       :32
+			"maxY"       :64
 		}
 	},
 	"library":"./example/",

@@ -5,6 +5,7 @@ import parser
 import module
 from jsonc_parser.parser import JsoncParser
 import importlib
+import time
 
 settings = {}
 if __name__ == "__main__":
@@ -25,6 +26,8 @@ if __name__ == "__main__":
 
 
 def main():
+    timeTable = []
+    timeTable.append(time.time())
     print(settings)
     p = parser.Parser(settings["input"])
     p.tokenize()
@@ -34,10 +37,15 @@ def main():
     module.executeTokenList(topLevel)
     mainMod = module.Module.lookup["main"]
     mainMod.generate()
+    timeTable.append(time.time())
     while(mainMod.reduceConnections()):pass
+    timeTable.append(time.time())
     print(mainMod)
     generator = importlib.import_module("gen." + settings["type"])
     #generator = #__import__("./gen/" + settings["type"])
-    generator.main(settings,mainMod)
+    generator.main(settings,mainMod,timeTable)
+    timeTable.append(time.time())
+    print(" - ".join([str(timeTable[x + 1] - timeTable[x]) for x in range(len(timeTable) - 1)]))
+
 
 if __name__ == "__main__":main()
