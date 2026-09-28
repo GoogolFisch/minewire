@@ -348,14 +348,15 @@ class WireVia:
         else:return
         print("Hello")
         lan = self.inLane or self.outLane
-        sign = (lan.wire > lan.parent.wire) * 2 - 1
+        sign = (lan.wire > self.wire) * 2 - 1
         repSign = pdir and Blocks.repeatPlusZ or Blocks.repeatMinusZ
         dz = lan.parent.wire + sign
         count = 4
         ly4 = lan.layer * 4
+        ol3 = lan.lane * 3
         while dz != lan.wire:
             if(count >= 3):
-                reg[lan.lane * 3,ly4 + 3,dz * 3] = repSign
+                reg[ol3,ly4 + 3,dz * 3] = repSign
                 #print(lan.lane,lan.layer,dz)
                 count = 0
             else:count += 1
@@ -370,6 +371,8 @@ class WireVia:
                 count = 0
             else:count += 1
             dx -= 1
+        if(self.outLane is not None):reg[ol3 + 1,ly4 + 1,self.wire * 3] = Blocks.repeatMinusX
+        if(self.inLane  is not None):reg[ol3 + 1,ly4 + 1,self.wire * 3] = Blocks.repeatPlusX
 
 
 
@@ -407,8 +410,6 @@ class WireVia:
         ol3 = ol.lane * 3
         ow3 = ol.wire * 3
         ly4 = ol.layer * 4
-        #if(self.outLane is not None):reg[ol3 + 1,ly4 + 1,self.wire * 3] = Blocks.repeatMinusX
-        #if(self.inLane  is not None):reg[ol3 + 1,ly4 + 1,self.wire * 3] = Blocks.repeatPlusX
         for z in range(ol.start * 3 + 2,ol.end * 3 - 1):
             if(reg[ol3,ly4 + 2,z].id != "minecraft:air"):continue
             reg[ol3,ly4 + 2,z] = Blocks.baseZBlock
