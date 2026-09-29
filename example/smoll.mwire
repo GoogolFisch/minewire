@@ -1,0 +1,20 @@
+
+component xor (a,b) (c) (
+	c = (~a&b)|(a&~b)
+)
+component D-latch (clk,d) (sto) (
+	setHigh = clk&d
+	setLow  = clk&~d
+	sto = ~(nto|setHigh)
+	nto = ~(sto|setLow )
+)
+module 2-1-multiplex (sel,a,b) (out) (
+	posA = a&~sel
+	posB = b& sel
+	out = posA|posB
+)
+module main (inv,sel,a,b,clk) (data) (
+	@2-1-multiplex(sel,a,b)(plx)
+	@xor(inv,plx)(plx2)
+	@D-latch(clk,plx2)(data)
+)

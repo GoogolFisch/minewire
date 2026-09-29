@@ -14,19 +14,33 @@ TRYS = 100
 OVER_MAX = 64
 
 laneCounter = 2
+laneAltDown = False
 def monotonicLaneCounter(jump=-1):
-    global laneCounter
+    global laneCounter, laneAltDown
+    laneAltDown = False
     if(jump < laneCounter and jump != -1):return jump
     laneCounter = max(jump,laneCounter)
     laneCounter += 1
     return laneCounter - 1
+def tonicLaneAltenator(jump=-1):
+    global laneCounter, laneAltDown
+    laneCounter += laneAltDown * 2 - 1
+    laneAltDown = not laneAltDown
+    return laneCounter
 wireCounter = 2
+wireAltDown = False
 def monotonicWireCounter(jump=-1):
-    global wireCounter
+    global wireCounter,wireAltDown
+    wireAltDown = False
     if(jump < wireCounter and jump != -1):return jump
     wireCounter = max(jump,wireCounter)
     wireCounter += 1
     return wireCounter - 1
+def tonicWireAltenator(jump=-1):
+    global wireCounter,wireAltDown
+    wireCounter += wireAltDown * 2 - 1
+    wireAltDown = not wireAltDown
+    return wireCounter
 
 
 class Blocks:
@@ -1028,10 +1042,10 @@ class Module:
         countWire = 100
         for wv in self.wires:
             wv.wire = monotonicWireCounter()
-            wv.lane = monotonicLaneCounter()
+            wv.lane = tonicLaneAltenator()
             wv.reset()
         for lv in self.lanes:
-            lv.wire = monotonicWireCounter()
+            lv.wire = tonicWireAltenator()
             lv.lane = monotonicLaneCounter()
             lv.reset()
         for cx in self.cross:
