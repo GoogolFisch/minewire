@@ -6,6 +6,7 @@ import module
 from jsonc_parser.parser import JsoncParser
 import importlib
 import time
+from helper import helper
 
 settings = {}
 if __name__ == "__main__":
@@ -19,6 +20,7 @@ if __name__ == "__main__":
         elif(arg == "-t"):
             idx += 1
             settings["type"] = sys.argv[idx]
+        elif(arg[0] == "-"):pass
         else:
             settings["input"] = arg
         idx += 1
@@ -47,5 +49,16 @@ def main():
     timeTable.append(time.time())
     print(" - ".join([str(timeTable[x + 1] - timeTable[x]) for x in range(len(timeTable) - 1)]))
 
+def testRemove(lst,*args) -> None | str:
+    for i in args:
+        if i in lst:
+            lst.remove(i)
+            return i
+    return None
 
-if __name__ == "__main__":main()
+if __name__ == "__main__":
+    cpArgs = sys.argv.copy()
+    found = testRemove(cpArgs,"-h","-help","--help")
+    if(found):
+        exit(helper(settings,cpArgs,found))
+    exit(main())

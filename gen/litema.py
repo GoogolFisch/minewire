@@ -71,7 +71,7 @@ class Blocks:
     author      = "MineWire",
     description = "MineWire generated",
     output      = "./output.litematic"
-    temperatur  = 100
+    temperatur  = 10
     decay       = 0.2
 
 def safeCurruptBlocks(settings):
