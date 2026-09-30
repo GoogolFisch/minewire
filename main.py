@@ -9,20 +9,20 @@ import time
 from helper import helper
 
 settings = {}
+def putSetting(setting,key,argv,idx):
+    setting[key] = argv[idx + 1]
+    return idx + 1
+
 if __name__ == "__main__":
     settings = JsoncParser.parse_file("./settings.jsonc")
     idx = 1
     while idx < len(sys.argv):
         arg = sys.argv[idx]
-        if(arg == '-o'):
-            idx += 1
-            settings["output"] = sys.argv[idx]
-        elif(arg == "-t"):
-            idx += 1
-            settings["type"] = sys.argv[idx]
+        if  (arg == '-o'   ):idx = putSetting(settings,"output",sys.argv,idx)
+        elif(arg == "-name"):idx = putSetting(settings,"name"  ,sys.argv,idx)
+        elif(arg == "-t"   ):idx = putSetting(settings,"type"  ,sys.argv,idx)
         elif(arg[0] == "-"):pass
-        else:
-            settings["input"] = arg
+        else:settings["input"] = arg
         idx += 1
 
 

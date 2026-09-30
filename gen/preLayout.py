@@ -86,4 +86,4 @@ class PosVector:
         self.z = 0
 
     def magSq(self):
-        return self.x ** 2 + self.y ** 2 + self.z ** 2
+        return max(self.x ** 2,self.y ** 2,self.z ** 2)

@@ -67,12 +67,15 @@ class Blocks:
     repeatMinusZ = BlockState("minecraft:repeater",facing="south")
     repeatPlusZ  = BlockState("minecraft:repeater",facing="north")
 
-    name        = "Computational MineWire",
-    author      = "MineWire",
-    description = "MineWire generated",
+    name        = "Computational MineWire"
+    author      = "MineWire"
+    description = "MineWire generated"
     output      = "./output.litematic"
-    temperatur  = 10
+    temperatur  = 1
     decay       = 0.2
+
+    stepSize  = 0.5
+    stepCount = 1000
 
 def safeCurruptBlocks(settings):
     try:
@@ -80,16 +83,18 @@ def safeCurruptBlocks(settings):
         old = Blocks
         next = Blocks()
         next.__dict__ = old.__dict__.copy()
+        Blocks = next
+        Blocks.name += " " + settings["input"]
         #next.baseXBlock = next.baseBlock
         #next.baseYBlock = next.baseBlock
         #next.baseZBlock = next.baseBlock
-        Blocks = next
         mc_settings = settings["minecraft"]
         schem_settings = mc_settings["mc-schematic"]
         block_settings = mc_settings["blocks"]
         for k,v in schem_settings.items():
             Blocks.__dict__[k] = v
         Blocks.output = settings.get("output",Blocks.output)
+        Blocks.name = settings.get("name",Blocks.name)
         for k,v in block_settings.items():
             cp = v.copy()
             idy = cp.pop("_id")
@@ -103,6 +108,7 @@ def safeCurruptBlocks(settings):
                 if(oldBase == Blocks.baseZBlock):Blocks.baseZBlock = newBase
     except Exception as e:
         print(repr(e))
+        raise e
 
 class WireWire:
     __slots__ = ("parent","start","end")
@@ -1041,11 +1047,10 @@ class Module:
         return False
 
     def steppedLayout(self):
-        STEPS = 100
-        STEP  = 0.1
+        STEP  = Blocks.stepSize
         for cx in self.cross:
             cx.preLayout = PosVector()
-        for _ in range(STEPS):
+        for _ in range(Blocks.stepCount):
             for cx in self.cross:
                 # avoide
                 for cx2 in self.cross:
