@@ -2,8 +2,10 @@
 #import litemapy
 try:
     from gen.util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver
+    from gen.preLayout import PosVector
 except:
     from util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver
+    from preLayout import PosVector
 
 import time
 from litemapy import Region, BlockState, Schematic
@@ -151,7 +153,7 @@ class WireLane:
         self.parent = parent
         self.wire   = wire
         self.layer  = layer
-        self.lane   = monotonicLaneCounter()
+        self.lane   = monotonicLaneCounter(2)
         self.inlet  = None
         self.outlet = None
         self.child  = None
@@ -598,7 +600,7 @@ class LaneVia:
 
 
 class Connection:
-    __slots__ = ("wireVia","laneVia","layer","invert","dirLane","strength")
+    __slots__ = ("wireVia","laneVia","layer","invert","dirLane","strength","preLayout")
     def __init__(self,wire,lane,dirLane,invert,ref):
         self.wireVia = wire
         self.laneVia = lane
@@ -1037,6 +1039,67 @@ class Module:
         cx.layer        = oldY
         self.getCostDiffCross(cx)
         return False
+
+    def steppedLayout(self):
+        STEPS = 100
+        STEP  = 0.1
+        for cx in self.cross:
+            cx.preLayout = PosVector()
+        for _ in range(STEPS):
+            for cx in self.cross:
+                # avoide
+                for cx2 in self.cross:
+                    cx.preLayout.avoide(cx2.preLayout)
+                # wire
+                for wcx in cx.wireVia.outLets:
+                    cx.preLayout.spring(wcx.preLayout,1,5,3)
+                if(cx.wireVia.inLet is not None):
+                    cx.preLayout.spring(cx.wireVia.inLet,1,3,9)
+                lan = cx.wireVia.inLane or cx.wireVia.outLane
+                if(lan is not None):
+                    cx.preLayout.rawspring(lan.wire,lan.layer,lan.lane,1,3,9)
+                # lanes
+                for lcx in cx.laneVia.inLets:
+                    cx.preLayout.spring(lcx.preLayout,9,3,1)
+                cx.preLayout.spring(cx.laneVia.outLet.preLayout,9,3,1)
+            for cx in self.cross:
+                cx.preLayout.move(SCALE)
+        # redo into real
+        for cx in self.cross:
+            cx.layer = int(cx.preLayout.getY())
+        # wires
+        for wr in self.wires:
+            avX = 0
+            avZ = 0
+            cnt = 0
+            for cx in wr.outLets:
+                cnt += 1
+                avX += cx.preLayout.getX()
+                avZ += cx.preLayout.getZ()
+            cx = wr.inLet
+            if(cx is not None):
+                cnt += 1
+                avX += cx.preLayout.getX()
+                avZ += cx.preLayout.getZ()
+            wr.lane = int(avX)
+            wr.wire = int(avZ)
+        # lanes
+        for ln in self.lanes:
+            avX = 0
+            avZ = 0
+            cnt = 0
+            for cx in ln.inLets:
+                cnt += 1
+                avX += cx.preLayout.getX()
+                avZ += cx.preLayout.getZ()
+            cx = ln.outLet
+            if(cx is not None):
+                cnt += 1
+                avX += cx.preLayout.getX()
+                avZ += cx.preLayout.getZ()
+            wr.lane = int(avX)
+            wr.wire = int(avZ)
+
 
     def layout(self):
         countWire = 100
