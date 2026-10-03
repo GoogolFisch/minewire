@@ -1,16 +1,19 @@
 import random
 
 class Layout:
-    __slots__ = ("pos","vec")
+    __slots__ = ("pos","vec","count")
     def __init__(self,scale = 100):
         self.pos = PosVector.FromUniform(0,scale)
         self.vec = PosVector()
+        self.count = 0
 
     def move(self,scale=0.1):
-        self.pos += self.vec * scale
+        sc = scale / max(self.count,1)
+        self.pos += self.vec * sc
         if(self.pos.y > 200):
             print(self.pos.y,self.vec.y)
         self.vec.zero()
+        self.count = 0
         self.pos.x = max(2,self.pos.x)
         self.pos.y = max(0,self.pos.y)
         self.pos.z = max(2,self.pos.z)

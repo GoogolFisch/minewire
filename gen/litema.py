@@ -74,7 +74,7 @@ class Blocks:
     temperatur  = 1
     decay       = 0.2
 
-    stepSize  = 0.001
+    stepSize  = 0.01
     stepCount = 1000
 
 def safeCurruptBlocks(settings):
@@ -1091,6 +1091,7 @@ class Module:
                 cnt += 1
                 avX += cx.preLayout.getX()
                 avZ += cx.preLayout.getZ()
+            print(avX,avZ,cnt)
             wr.lane = int(avX // cnt)
             wr.wire = int(avZ // cnt)
         # lanes
@@ -1107,8 +1108,8 @@ class Module:
                 cnt += 1
                 avX += cx.preLayout.getX()
                 avZ += cx.preLayout.getZ()
-            wr.lane = int(avX // cnt)
-            wr.wire = int(avZ // cnt)
+            ln.lane = int(avX // cnt)
+            ln.wire = int(avZ // cnt)
         print("Done stepped layout")
 
 
