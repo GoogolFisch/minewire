@@ -2,10 +2,10 @@
 #import litemapy
 try:
     from gen.util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver
-    from gen.preLayout import PosVector
+    from gen.preLayout import Layout
 except:
     from util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver
-    from preLayout import PosVector
+    from preLayout import Layout
 
 import time
 from litemapy import Region, BlockState, Schematic
@@ -74,7 +74,7 @@ class Blocks:
     temperatur  = 1
     decay       = 0.2
 
-    stepSize  = 0.5
+    stepSize  = 0.001
     stepCount = 1000
 
 def safeCurruptBlocks(settings):
@@ -1048,30 +1048,35 @@ class Module:
 
     def steppedLayout(self):
         STEP  = Blocks.stepSize
+        wireComp = (1,5,22)
+        laneComp = (22,5,1)
         for cx in self.cross:
-            cx.preLayout = PosVector()
-        for _ in range(Blocks.stepCount):
+            cx.preLayout = Layout()
+        for displayNumber in range(Blocks.stepCount):
+            print(displayNumber,end="\b" * 8,flush=True)
             for cx in self.cross:
                 # avoide
                 for cx2 in self.cross:
                     cx.preLayout.avoide(cx2.preLayout)
                 # wire
                 for wcx in cx.wireVia.outLets:
-                    cx.preLayout.spring(wcx.preLayout,1,5,3)
+                    cx.preLayout.spring(wcx.preLayout,*wireComp)
                 if(cx.wireVia.inLet is not None):
-                    cx.preLayout.spring(cx.wireVia.inLet,1,3,9)
+                    cx.preLayout.spring(cx.wireVia.inLet.preLayout,*wireComp)
                 lan = cx.wireVia.inLane or cx.wireVia.outLane
                 if(lan is not None):
-                    cx.preLayout.rawspring(lan.wire,lan.layer,lan.lane,1,3,9)
+                    cx.preLayout.rawSpring(lan.wire,lan.layer,lan.lane,*wireComp)
                 # lanes
                 for lcx in cx.laneVia.inLets:
-                    cx.preLayout.spring(lcx.preLayout,9,3,1)
-                cx.preLayout.spring(cx.laneVia.outLet.preLayout,9,3,1)
+                    cx.preLayout.spring(lcx.preLayout,*laneComp)
+                cx.preLayout.spring(cx.laneVia.outLet.preLayout,*laneComp)
             for cx in self.cross:
-                cx.preLayout.move(SCALE)
+                cx.preLayout.move(STEP)
+                #cx.preLayout.move(0.001)
         # redo into real
         for cx in self.cross:
             cx.layer = int(cx.preLayout.getY())
+            #print(cx.preLayout)
         # wires
         for wr in self.wires:
             avX = 0
@@ -1086,8 +1091,8 @@ class Module:
                 cnt += 1
                 avX += cx.preLayout.getX()
                 avZ += cx.preLayout.getZ()
-            wr.lane = int(avX)
-            wr.wire = int(avZ)
+            wr.lane = int(avX // cnt)
+            wr.wire = int(avZ // cnt)
         # lanes
         for ln in self.lanes:
             avX = 0
@@ -1102,8 +1107,9 @@ class Module:
                 cnt += 1
                 avX += cx.preLayout.getX()
                 avZ += cx.preLayout.getZ()
-            wr.lane = int(avX)
-            wr.wire = int(avZ)
+            wr.lane = int(avX // cnt)
+            wr.wire = int(avZ // cnt)
+        print("Done stepped layout")
 
 
     def layout(self):
@@ -1120,6 +1126,7 @@ class Module:
             #cx.layer = random.randrange(0,4)
             cx.layer = 0
             cx.update()
+        print("Done normal layout")
 
     def compact(self,temp:float) -> bool:
         if(DO_FORCE_CHECK):prev = self.getTotalCost()
@@ -1220,7 +1227,8 @@ def main(settings,module,timeTable):
     timeTable.append(time.time())
     safeCurruptBlocks(settings)
     m = module.carbonCopy(Module,WireVia,LaneVia,Connection)
-    m.layout()
+    # m.layout()
+    m.steppedLayout()
     m.getTotalCost(1)
     temp  = int  (Blocks.temperatur)
     decay = float(Blocks.decay     )

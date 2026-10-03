@@ -1,3 +1,6 @@
+from typing import TypeVar
+
+TToken = TypeVar("TToken",bound="Token")
 
 def __PrintError(*d,**da):print(*d,**da)
 
@@ -60,14 +63,14 @@ class Token:
             f"{self.__str__()}"
         )
 
-    def copyContext(self,t:Token):
+    def copyContext(self,t:TToken):
         self.tLine   = t.tLine
         self.tColumn = t.tColumn
         self.tStart  = t.tStart
         self.tEnd    = t.tEnd
 
     @staticmethod
-    def ensureInLst(token:Token)->Token:
+    def ensureInLst(token:TToken)->TToken:
         if(token.typ == ","):return token
         t = Token(",",",",token.context)
         t.copyContext(token)
@@ -91,7 +94,7 @@ class Parser:
         self.line      = 0
         self.column    = 0
 
-    def tryLexTillEOL(self) -> Token:
+    def tryLexTillEOL(self) -> TToken:
         while(self.index < len(self.fileContent)):
             if(self.fileContent[self.index] == '\n'):
                 break
@@ -100,7 +103,7 @@ class Parser:
         self.tokenList.append(tok)
         return True
 
-    def tryLexComment(self) -> Token:
+    def tryLexComment(self) -> TToken:
         if(self.fileContent[self.index] != ';'):
             return False
         while(self.index < len(self.fileContent)):
@@ -109,7 +112,7 @@ class Parser:
             self.index += 1
         return True
 
-    def tryLexWhiteSpace(self) -> Token:
+    def tryLexWhiteSpace(self) -> TToken:
         if(ord(self.fileContent[self.index]) > 32):
             return False
         while(self.index < len(self.fileContent)):
@@ -126,7 +129,7 @@ class Parser:
     def _isCharOfWord(char) -> bool:
         return char.isalnum() or char in '-_'
 
-    def tryLexName(self) -> Token:
+    def tryLexName(self) -> TToken:
         if(not Parser._isCharOfWord(self.fileContent[self.index])):
             return False
         while(self.index < len(self.fileContent)):
@@ -138,14 +141,14 @@ class Parser:
         self.tokenList.append(tok)
         return True
 
-    def tryLexNumSeperator(self) -> Token:
+    def tryLexNumSeperator(self) -> TToken:
         if(self.fileContent[self.index] != ":"):return False
         self.index += 1
         tok = Token(":",":",self)
         self.tokenList.append(tok)
         return True
 
-    def tryLexSymbol(self) -> Token:
+    def tryLexSymbol(self) -> TToken:
         symbolChar = ",|&()~=@"
         char = self.fileContent[self.index]
         if(char not in symbolChar):
@@ -187,7 +190,7 @@ class Parser:
                   self.fileContent[self.index])
         #print("\n".join([str(x) for x in self.tokenList]))
 
-    def findNextToken(self,offset = 0,limit=-1) -> Token:
+    def findNextToken(self,offset = 0,limit=-1) -> TToken:
         if(limit == -1):limit = len(self.tokenList)
         self.index += offset
         while self.index < limit:
@@ -327,7 +330,7 @@ class Parser:
             self.index += 1
         #self.index = upper
 
-    def parseModule(self,t:Token) -> bool:
+    def parseModule(self,t:TToken) -> bool:
         tName = self.findNextToken(offset=1)
         tName.used = True
         t.args.append(tName)
@@ -378,7 +381,7 @@ class Parser:
             if(x.used):continue
             print(x.showWhere())
 
-    def getActiveList(self) -> list(Token):
+    def getActiveList(self) -> list:#(Token):
         lst = []
         for x in self.tokenList:
             if(x.used):continue

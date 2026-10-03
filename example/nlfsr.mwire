@@ -38,7 +38,10 @@ module main (pos-clk,neg-clk) (outp) (
 	@xor(neg-feedback:1,neg-feedback:2)(nlfsr-xor_1)
 	@xor(neg-feedback:3,nlfsr-xor_0)(nlfsr-xor_2)
 
-	@xor(nlfsr-xor_1,nlfsr-xor_2)(pos-feedback:0)
+	@xor(nlfsr-xor_1,nlfsr-xor_2)(dataFeedback)
+
+	setupClk = pos-clk & neg-clk
+	@xor(setupClk,dataFeedback)(pos-feedback:0)
 
 	; output signal
 	outp = pos-feedback:7
