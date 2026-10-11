@@ -1110,10 +1110,12 @@ class Module:
         countWire = 100
         for wv in self.wires:
             wv.wire = monotonicWireCounter()
-            wv.lane = tonicLaneAltenator()
+            #wv.lane = tonicLaneAltenator()
+            wv.lane = monotonicLaneCounter()
             wv.reset()
         for lv in self.lanes:
-            lv.wire = tonicWireAltenator()
+            #lv.wire = tonicWireAltenator()
+            lv.wire = monotonicWireCounter()
             lv.lane = monotonicLaneCounter()
             lv.reset()
         for cx in self.cross:
@@ -1220,8 +1222,9 @@ def main(settings,module,timeTable):
     timeTable.append(time.time())
     safeCurruptBlocks(settings)
     m = module.carbonCopy(Module,WireVia,LaneVia,Connection)
+    print(len(m.cross))
     m.layout()
-    m.getTotalCost(1)
+    print(m.getTotalCost(1))
     temp  = int  (Blocks.temperatur)
     decay = float(Blocks.decay     )
     counter = 0
