@@ -21,10 +21,17 @@ component halfAdder(a,cIn)(dOut,cOut) (
 	;dOut = (~a&cIn)|(a&~cIn)
 	cOut = a&cIn
 )
+component halfAdderTop(a,cIn)(dOut) (
+	@xor(a,cIn)(dOut)
+)
 component fadd(a,b,c)(fullXor,fullAnd) (
 	@xor(a,b)(halfXor)
 	@xor(halfXor,c)(fullXor)
 	fullAnd = (a&b)|(c&halfXor)
+)
+component faddTop(a,b,c)(fullXor) (
+	@xor(a,b)(halfXor)
+	@xor(halfXor,c)(fullXor)
 )
 component fsubC(a,b)(fullXor,fullAnd) (
 	@xor(a,b)(halfXor)
@@ -51,7 +58,7 @@ component sub16(a:16,b:16)(subl:16) (
 	@fadd (a:12,nb:12,c:11)(subl:12,c:12)
 	@fadd (a:13,nb:13,c:12)(subl:13,c:13)
 	@fadd (a:14,nb:14,c:13)(subl:14,c:14)
-	@fadd (a:15,nb:15,c:14)(subl:15,c:15)
+	@faddTop(a:15,nb:15,c:14)(subl:15)
 )
 component leq16(a:16) (cond) (
 	cond = a:15 | ~(
@@ -78,7 +85,7 @@ component increment1-16(a:16)(incr:16) (
 	@halfAdder(a:12,car:11)(incr:12,car:12)
 	@halfAdder(a:13,car:12)(incr:13,car:13)
 	@halfAdder(a:14,car:13)(incr:14,car:14)
-	@halfAdder(a:15,car:14)(incr:15,car:15)
+	@halfAdderTop(a:15,car:14)(incr:15)
 )
 component D-latch (clk,d) (sto) (
 	enable  = clk&d
