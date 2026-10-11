@@ -1,5 +1,12 @@
 
-import random
+try:
+    from rando import random as random
+    from rando import irange as randrange
+    from rando import frange as uniform
+except:
+    from random import randrange
+    from random import random
+    from random import uniform
 
 LENGTH_MAX = 999_999
 HEAT_SPREAD = 10
@@ -50,7 +57,7 @@ class Cost:
     def testLt(self,temp:float,other:Cost):
         if(self.errors < other.errors):return True
         if(self.errors > other.errors):return False
-        diff = (self.length + 1 - other.length) * random.uniform(0.01,1.0)
+        diff = (self.length + 1 - other.length) * uniform(0.01,1.0)
         return diff < temp
 
 

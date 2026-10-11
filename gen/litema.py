@@ -9,7 +9,11 @@ except:
 
 import time
 from litemapy import Region, BlockState, Schematic
-import random
+try:
+    from rando import irange as randrange
+except:
+    from random import randrange
+from random import shuffle
 
 DO_FORCE_CHECK = False
 TRYS = 100
@@ -949,8 +953,8 @@ class Module:
         maxW = min(999999,oldW + OVER_MAX)
         maxL = min(999999,oldL + OVER_MAX)
         for _ in range(TRYS):
-            lv.wire = random.randrange(minW,maxW)
-            lv.lane = random.randrange(minL,maxL)
+            lv.wire = randrange(minW,maxW)
+            lv.lane = randrange(minL,maxL)
             newC = self.getCostDiffLaneV(lv)
             if newC.testLt(temp,baseC):return True
         lv.wire = oldW
@@ -977,8 +981,8 @@ class Module:
         maxW = min(999999,oldW + OVER_MAX)
         maxL = min(999999,oldL + OVER_MAX)
         for _ in range(TRYS):
-            wv.wire = random.randrange(minW,maxW)
-            wv.lane = random.randrange(minL,maxL)
+            wv.wire = randrange(minW,maxW)
+            wv.lane = randrange(minL,maxL)
             newC = self.getCostDiffWireV(wv)
             if newC.testLt(temp,baseC):return True
         wv.wire = oldW
@@ -1021,19 +1025,19 @@ class Module:
         maxLL = min(999999,lanL + OVER_MAX)
         oldY = cx.layer
         for _ in range(TRYS):
-            cx.wireVia.wire = random.randrange(minWW,maxWW)
-            cx.wireVia.lane = random.randrange(minWL,maxWL)
-            cx.laneVia.wire = random.randrange(minLW,maxLW)
-            cx.laneVia.lane = random.randrange(minLL,maxLL)
-            cx.layer        = random.randrange(0,oldY + OVER_MAX)
+            cx.wireVia.wire = randrange(minWW,maxWW)
+            cx.wireVia.lane = randrange(minWL,maxWL)
+            cx.laneVia.wire = randrange(minLW,maxLW)
+            cx.laneVia.lane = randrange(minLL,maxLL)
+            cx.layer        = randrange(0,oldY + OVER_MAX)
             newC = self.getCostDiffCross(cx)
             if newC.testLt(temp,baseC):return True
         cx.wireVia.lane = wirL
         cx.laneVia.wire = lanW
         for _ in range(TRYS):
-            cx.wireVia.wire = random.randrange(minWW,maxWW)
-            cx.laneVia.lane = random.randrange(minLL,maxLL)
-            cx.layer        = random.randrange(0,oldY + OVER_MAX)
+            cx.wireVia.wire = randrange(minWW,maxWW)
+            cx.laneVia.lane = randrange(minLL,maxLL)
+            cx.layer        = randrange(0,oldY + OVER_MAX)
             newC = self.getCostDiffCross(cx)
             if newC.testLt(temp,baseC):return True
         cx.wireVia.wire = wirW
@@ -1136,7 +1140,7 @@ class Module:
             lv.lane = monotonicLaneCounter()
             lv.reset()
         for cx in self.cross:
-            #cx.layer = random.randrange(0,4)
+            #cx.layer = randrange(0,4)
             cx.layer = 0
             cx.update()
         print("Done normal layout")
@@ -1145,7 +1149,7 @@ class Module:
         if(DO_FORCE_CHECK):prev = self.getTotalCost()
         didChange = False
         if(DO_FORCE_CHECK):print("wires")
-        random.shuffle(self.wires)
+        shuffle(self.wires)
         for wv in self.wires:
             ch = self.tryCompactWireV(temp,wv)
             didChange |= ch
@@ -1163,7 +1167,7 @@ class Module:
                 print(f"{prev} -> {next}")
                 prev = next
         if(DO_FORCE_CHECK):print("lanes")
-        random.shuffle(self.lanes)
+        shuffle(self.lanes)
         for lv in self.lanes:
             ch = self.tryCompactLaneV(temp,lv)
             didChange |= ch
