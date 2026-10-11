@@ -353,16 +353,16 @@ class Module:
         for cx in self.cross:
             if(cx.lane not in self.lanes):
                 breakpoint()
-                raise Exception(f"(2026-09-11T20:04:35) {s} {cx} Can't find {cx.lane} in lanes")
+                raise Exception(f"(2026-09-11T20:04:35) {s} {cx.token.showWhere()} {cx} Can't find {cx.lane} in lanes")
             if(cx.wire not in self.wires):
                 breakpoint()
-                raise Exception(f"(2026-09-11T20:05:05) {s} {cx} Can't find {cx.wire} in wires")
+                raise Exception(f"(2026-09-11T20:05:05) {s} {cx.token.showWhere()} {cx} Can't find {cx.wire} in wires")
             if(cx not in ([cx.wire.inLet] + cx.wire.outLets)):
                 breakpoint()
-                raise Exception(f"(2026-09-11T20:15:19) {s} {cx} Can't find {cx.wire} in wires rev")
+                raise Exception(f"(2026-09-11T20:15:19) {s} {cx.token.showWhere()} {cx} Can't find {cx.wire} in wires rev")
             if(cx not in ([cx.lane.outLet] + cx.lane.inLets)):
                 breakpoint()
-                raise Exception(f"(2026-09-11T20:15:47) {s} {cx} Can't find {cx.lane} in lanes rev")
+                raise Exception(f"(2026-09-11T20:15:47) {s} {cx.token.showWhere()} {cx} Can't find {cx.lane} in lanes rev")
             laneRaise = wireRaise = True
             if(cx == cx.lane.outLet ):laneRaise = False
             if(cx in cx.lane.inLets ):laneRaise = False
@@ -370,10 +370,10 @@ class Module:
             if(cx == cx.wire.inLet  ):wireRaise = False
             if(laneRaise):
                 breakpoint()
-                raise Exception(f"(2026-09-21T17:14:18) {s} {cx} Connection not in lane {cx.lane}")
+                raise Exception(f"(2026-09-21T17:14:18) {s} {cx.token.showWhere()} {cx} Connection not in lane {cx.lane}")
             if(wireRaise):
                 breakpoint()
-                raise Exception(f"(2026-09-21T17:14:18) {s} {cx} Connection not in wire {cx.wire}")
+                raise Exception(f"(2026-09-21T17:14:18) {s} {cx.token.showWhere()} {cx} Connection not in wire {cx.wire}")
         for wr in self.wires:
             if(wr.inLet is not None and wr.inLet.wire != wr):
                 raise Exception(f"(2026-09-22T11:08:39) {s} {wr} {wr.inLet} not the same!")
