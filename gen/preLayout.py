@@ -1,14 +1,19 @@
 import random
 
 class Layout:
-    __slots__ = ("pos","vec")
+    __slots__ = ("pos","vec","count")
     def __init__(self,scale = 100):
         self.pos = PosVector.FromUniform(0,scale)
         self.vec = PosVector()
+        self.count = 0
 
     def move(self,scale=0.1):
-        self.pos += self.vec * scale
+        sc = scale / max(self.count,1)
+        self.pos += self.vec * sc
+        if(self.pos.y > 200):
+            print(self.pos.y,self.vec.y)
         self.vec.zero()
+        self.count = 0
         self.pos.x = max(2,self.pos.x)
         self.pos.y = max(0,self.pos.y)
         self.pos.z = max(2,self.pos.z)
@@ -18,7 +23,7 @@ class Layout:
         diff = self.pos - other.pos
         mag = diff.magSq() * 0.75
         if(mag > 0.01):
-            self.vec += diff / diff.magSq()
+            self.vec += diff / mag
         else:
             self.vec += PosVector.FromUniform(-1,1)
 
@@ -36,9 +41,11 @@ class Layout:
         diff.z *= sz
         self.vec += diff
 
-    def getX(self):return pos.x
-    def getY(self):return pos.y
-    def getZ(self):return pos.z
+    def getX(self):return self.pos.x
+    def getY(self):return self.pos.y
+    def getZ(self):return self.pos.z
+    def __str__(self):
+        return f"<{self.pos.x}-{self.pos.y}-{self.pos.z}>"
 
 
 
@@ -73,7 +80,7 @@ class PosVector:
         np.z = self.z * scale
         return np 
 
-    def __div__(self,scale = 1):
+    def __truediv__(self,scale = 1):
         np = PosVector()
         np.x = self.x / scale
         np.y = self.y / scale

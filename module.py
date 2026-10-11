@@ -1,8 +1,11 @@
 
+from typing import TypeVar
 import random
 import uuid
 
 DO_FORCE_CHECK = False
+TConnection = TypeVar("TConnection",bound="Connection")
+TModule     = TypeVar("TModule"    ,bound="Module"    )
 
 def _PrintError  (*d,**da):print("\x1b[0;31m",*d,"\x1b[0m",**da)
 def _PrintWarning(*d,**da):print("\x1b[0;33m",*d,"\x1b[0m",**da)
@@ -27,7 +30,7 @@ class Connection:
         self.dirLane = dirLane
         self.invert  = invert
 
-    def delete(self) -> Connection:
+    def delete(self) -> TConnection:
         if(self.dirLane):
             # MAY REMOVE TRY
             try:
@@ -57,7 +60,7 @@ class Connection:
             self.lane.outLet = self
 
     def __str__(self):
-        dat = f"<({str(id(self))[-4:]})Connection:{' ~'[self.invert]}{"wl"[self.dirLane]} {self.wire.name}>"
+        dat = f"<({str(id(self))[-4:]})Connection:{' ~'[self.invert]}{'wl'[self.dirLane]} {self.wire.name}>"
         return dat
 
 class Wire:
@@ -93,7 +96,7 @@ class Lane:
         self.outLet = let
 
     def __str__(self):
-        return f"<Lane:{self.outLet},{"|".join([str(x) for x in self.inLets])}>"
+        return f"<Lane:{self.outLet},{'|'.join([str(x) for x in self.inLets])}>"
 
 class Module:
     lookup = dict()
@@ -482,15 +485,16 @@ class Module:
         return didChange
 
     def __str__(self):
+        nl = "\n"
         dat = f"<Module: {self.name}\n"
         dat += f"wires:{' | '.join([x.name for x in self.wires])}\n"
-        dat += f"lanes:{'\n'.join([' - ' + str(x) for x in self.lanes])}\n"
+        dat += f"lanes:{nl.join([' - ' + str(x) for x in self.lanes])}\n"
         dat += ">"
         return dat
 
     def carbonCopy(self,
                    newModule:type,newWire :type,
-                   newLane  :type,newCross:type) -> Module:
+                   newLane  :type,newCross:type) -> TModule:
         """
         newModule(wires,lanes,cross,ref)
         newWire(name,ref,isInput,isOutput)
@@ -532,7 +536,7 @@ class Module:
         self.outputWires = None
 
 
-def executeTokenList(tokenList:list[Token]):
+def executeTokenList(tokenList:list):
     remap = {}
     for token in tokenList:
         if(token.typ == "word" and token.data == "set"):
