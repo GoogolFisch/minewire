@@ -1,22 +1,64 @@
 import random
 
+EMPTY = list()
 class Layout:
+    LocationMap = dict()
+
+    @staticmethod
+    def FindNearLocation(loc:tuple)->list:
+        outp = list()
+        for x in range(-1,2):
+            for y in range(-1,2):
+                for z in range(-1,2):
+                    outp += Layout.LocationMap.get((x + loc[0],y + loc[1],z + loc[2]),EMPTY)
+        return outp
+
+    @staticmethod
+    def FindIfExists(obj):
+        count = 0
+        for k,v in Layout.LocationMap.items():
+            if(obj in v):
+                print(k,v,obj)
+                count += 1
+        return count
+
+
+
     __slots__ = ("pos","vec","count")
     def __init__(self,scale = 100):
         self.pos = PosVector.FromUniform(0,scale)
         self.vec = PosVector()
-        self.count = 0
+        self.count = 1
+        #
+        loc = self.toLoc()
+        ls = Layout.LocationMap.get(loc,None)
+        if(ls is not None): ls.append(self)
+        else: Layout.LocationMap[loc] = [self]
+
+    def toLoc(self):
+        FAC = 8
+        return (int(self.pos.x) // FAC,
+                int(self.pos.y) // FAC,
+                int(self.pos.z) // FAC)
 
     def move(self,scale=0.1):
-        sc = scale / max(self.count,1)
+        ls = Layout.LocationMap.get(self.toLoc(),EMPTY)
+        if(self not in ls):breakpoint()
+        ls.remove(self)
+        sc = scale / self.count
         self.pos += self.vec * sc
         if(self.pos.y > 200):
             print(self.pos.y,self.vec.y)
         self.vec.zero()
-        self.count = 0
+        self.count = 1
         self.pos.x = max(2,self.pos.x)
         self.pos.y = max(0,self.pos.y)
         self.pos.z = max(2,self.pos.z)
+        #
+        loc = self.toLoc()
+        ls = Layout.LocationMap.get(loc,None)
+        if(ls is not None): ls.append(self)
+        else: Layout.LocationMap[loc] = [self]
 
     def avoide(self,other:Layout):
         if(other == self):return
@@ -33,9 +75,11 @@ class Layout:
         diff.y *= sy
         diff.z *= sz
         self.vec += diff
+        self.count += 1
 
     def rawSpring(self,rx,ry,rz,sx,sy,sz):
         diff = PosVector(rx,ry,rz) - self.pos
+        self.count += 1
         diff.x *= sx
         diff.y *= sy
         diff.z *= sz

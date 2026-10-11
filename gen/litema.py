@@ -1056,8 +1056,11 @@ class Module:
             print(displayNumber,end="\b" * 8,flush=True)
             for cx in self.cross:
                 # avoide
-                for cx2 in self.cross:
-                    cx.preLayout.avoide(cx2.preLayout)
+                for cx2pre in Layout.FindNearLocation(cx.preLayout.toLoc()):
+                    cx.preLayout.avoide(cx2pre)
+                # avoide
+                #for cx2 in self.cross:
+                #    cx.preLayout.avoide(cx2.preLayout)
                 # wire
                 for wcx in cx.wireVia.outLets:
                     cx.preLayout.spring(wcx.preLayout,*wireComp)
