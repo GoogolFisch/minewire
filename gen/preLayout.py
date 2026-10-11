@@ -36,7 +36,7 @@ class Layout:
         else: Layout.LocationMap[loc] = [self]
 
     def toLoc(self):
-        FAC = 8
+        FAC = 6
         return (int(self.pos.x) // FAC,
                 int(self.pos.y) // FAC,
                 int(self.pos.z) // FAC)

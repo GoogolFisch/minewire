@@ -1053,7 +1053,7 @@ class Module:
         for cx in self.cross:
             cx.preLayout = Layout()
         for displayNumber in range(Blocks.stepCount):
-            print(displayNumber,end="\b" * 8,flush=True)
+            print(displayNumber,"",end="\b" * 8,flush=True)
             for cx in self.cross:
                 # avoide
                 for cx2pre in Layout.FindNearLocation(cx.preLayout.toLoc()):
@@ -1094,7 +1094,14 @@ class Module:
                 cnt += 1
                 avX += cx.preLayout.getX()
                 avZ += cx.preLayout.getZ()
+            lan = wr.inLane or wr.outLane
+            if(lan is not None):
+                cnt += 1
+                avX += lan.lane
+                avZ += lan.wire
             print(avX,avZ,cnt)
+            if(cnt == 0):breakpoint()
+            if(cnt == 0):cnt = 1
             wr.lane = int(avX // cnt)
             wr.wire = int(avZ // cnt)
         # lanes
