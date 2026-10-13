@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
-DIR=./hardWear/
+DIR="./hardWear"
+OPTIMIZE="-g"
+FLAGS="-shared -fPIC -xc -I/usr/include/python3.14"
 
-gcc -g -o ./rando.so -shared -fPIC -xc -I/usr/include/python3.14 $DIR/crando.c -w
+gcc $OPTIMIZE -o ./rando.so  $FLAGS $DIR/crando.c  -w
+gcc $OPTIMIZE -o ./spring.so $FLAGS $DIR/cspring.c -w
