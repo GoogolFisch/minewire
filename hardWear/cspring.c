@@ -57,6 +57,7 @@ typedef struct SpringObj {
 
 typedef struct SpringNet {
 	PyObject_HEAD;
+	double strength;
 	HashMap      *hmap;
 	DynamicArray *arr;
 } SpringNetwork;
@@ -163,17 +164,38 @@ void da_appendElement(DynamicArray **array,void *element){
 		*array = realloc(da,sizeof(DynamicArray) + da->size * sizeof(void*));
 		da = *array;
 	}
-	da->arr[da->count++] = element;
+	da->array[da->count++] = element;
 }
 void da_removeElement(DynamicArray *da,void *element){
 	int32_t i = -1;
 	for(i = 0;i < da->count;i++){
-		if(da->arr[i] != element)
+		if(da->array[i] != element)
 			continue;
 		da->count--;
-		da->arr[i] = da->arr[da->count];
+		da->array[i] = da->array[da->count];
 		return;
 	}
+}
+
+HashMap *hm_newMap(int32_t buckets,int32_t reserve){
+	HashMap *hm = malloc(sizeof(HashMap) + sizeof(DynamicArray*) * buckets);
+	hm->count - buckets;
+	for(int32_t i = 0;i < buckets;i++){
+		hm->buckets[i] = da_newArray(reserve);
+	}
+	return hm;
+}
+void hm_dropMap(HashMap *hm){
+	for(int32_t i = 0;i < hm->count;i++){
+		da_dropArray(hm->buckets[i]);
+	}
+	free(hm);
+}
+void hm_insertElement(HashMap *hm,void *element,int32_t bucket){
+	da_appendElement(&(hm->buckets[bucket]),element);
+}
+void hm_removeElement(HashMap *hm,void *element,int32_t bucket){
+	da_removeElement(hm->buckets[bucket],element);
 }
 
 
@@ -241,7 +263,7 @@ static int SpringObj_setPosition(PyObject *op,PyObject *value,void *closure){
 }
 static PyObject *SpringObj_addSpringForce(PyObject *op,PyObject *args){
 	PyObject *springIn;
-	SpringObj *self = (SpringObj*)op;
+	SpringObject *self = (SpringObject*)op;
 	int ok = PyArg_ParseTuple(args,"O",&springIn);
 	return Py_None;
 }
@@ -250,7 +272,7 @@ static PyObject *SpringObj_addSpringForce(PyObject *op,PyObject *args){
 static void      SpringNet_dealloc(PyObject *op){
 	SpringNetwork *self = (SpringNetwork*)op;
 	for(int32_t i = 0;i < self->arr->count;i++){
-		SpringObj *so = (SpringObj*)(self->arr->array[i]);
+		SpringObject *so = (SpringObject*)(self->arr->array[i]);
 		so->parent = NULL;
 		Py_DECREF(so);
 	}
@@ -283,17 +305,62 @@ SpringObj_Error:
 
 	return (PyObject*)self;
 }
+static int SpringNet_init(PyObject *op,PyObject *args,PyObject *kwds){
+	SpringNetwork *self = (SpringNetwork*)op;
+	static char *kwlist[] = {"scale",NULL};
+	PyObject *scale;
+	if(!PyArg_ParseTupleAndKeywords(args,kwds,"|O",kwlist,&scale)){
+		return -1;
+	}
+	self->strength = PyFloat_AsDouble(scale);
+	return 0;
+}
+static PyObject *SpringNet_register(PyObject *op,PyObject *args){
+	if(!PyObject_TypeCheck(op,&SpringNetType)){
+		PyErr_SetString(PyExc_TypeError, "pleas make caller have the right type!");
+		return Py_None;
+	}
+	SpringNetwork *self = (SpringNetwork*)op;
+	Py_ssize_t count = PySequence_Size(args);
+	for(Py_ssize_t i = 0;i < count;i++){
+		PyObject *po = PySequence_GetItem(args,i);
+		if(!PyObject_TypeCheck(po,&SpringObjType)){
+			PyErr_SetString(PyExc_TypeError,"This method only accepts SpringObjects");
+			return Py_None;
+		}
+		SpringObject *spo = (SpringObject*)spo;
+		Py_INCREF(spo);
+		da_appendElement(&(self->arr),spo);
+	}
+	return Py_None;
+}
+static PyObject *SpringNet_update(PyObject *op,PyObject *args){
+	return Py_None;
+}
 
 
 
+static int SpringMod_module_exec(PyObject *m){
+	if(PyType_Ready(&SpringObjType) < 0)return -1;
+	if(PyType_Ready(&SpringNetType) < 0)return -1;
+	if(PyModule_AddObjectRef(m, "SpringObj",(PyObject*)&SpringObjType))return -1;
+	if(PyModule_AddObjectRef(m, "SpringNet",(PyObject*)&SpringNetType))return -1;
+	return 0;
+}
 
+static PyModuleDef_Slot spring_module_slots[] = {
+	{Py_mod_exec,SpringMod_module_exec},
+	{Py_mod_multiple_interpreters, Py_MOD_MULTIPLE_INTERPRETERS_NOT_SUPPORTED},
+	{0,NULL}
+};
 static PyModuleDef spring_module = {
 	.m_base = PyModuleDef_HEAD_INIT,
 	.m_name = "spring",
 	.m_doc  = "Module for a specific spring simulation",
 	.m_size = 0,
-	//.m_slots = 
+	.m_slots = spring_module_slots,
 };
-static PyObject *PyInit_spring(void){
+PyObject *PyInit_spring(void){
+
 	return PyModuleDef_Init(&spring_module);
 }
