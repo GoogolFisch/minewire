@@ -167,7 +167,6 @@ module main(stageClk:10,getValue:N,reset)(addr:N,setValue:N,doWrite) (
 	@leq16(valueOut)(doJump)
 	doSwitch = doJump & clkJump
 
-
 )
 
 

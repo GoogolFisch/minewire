@@ -1089,12 +1089,8 @@ class Module:
             avX = 0
             avZ = 0
             cnt = 0
-            for cx in wr.outLets:
-                cnt += 1
-                avX += cx.preLayout.getX()
-                avZ += cx.preLayout.getZ()
-            cx = wr.inLet
-            if(cx is not None):
+            for cx in *wr.outLets,wr.inLet:
+                if(cx is None):continue
                 cnt += 1
                 avX += cx.preLayout.getX()
                 avZ += cx.preLayout.getZ()
@@ -1113,12 +1109,8 @@ class Module:
             avX = 0
             avZ = 0
             cnt = 0
-            for cx in ln.inLets:
-                cnt += 1
-                avX += cx.preLayout.getX()
-                avZ += cx.preLayout.getZ()
-            cx = ln.outLet
-            if(cx is not None):
+            for cx in *ln.inLets,ln.outLet:
+                if(cx is None):continue
                 cnt += 1
                 avX += cx.preLayout.getX()
                 avZ += cx.preLayout.getZ()
@@ -1255,7 +1247,7 @@ def main(settings,module,timeTable):
     while m.compact(temp):
         temp *= decay
         counter += 1
-        print(counter,end="\b"*10,flush=True)
+        print(counter,m.getTotalCost(),end="\r",flush=True)
     dim,cost,*_ = m.write()
     print(f"after {counter} steps. Dimension:{dim}")
     print(f"cost:{str(cost)}")

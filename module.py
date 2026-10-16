@@ -395,7 +395,7 @@ class Module:
         for wir in self.wires.copy():
             if(wir.isIO):continue
             if(wir.inLet is None):
-                for cx in wir.outLets:
+                for cx in wir.outLets.copy():
                     self.cross.remove(cx.delete())
                 self.wires.remove(wir)
                 didChange = True
@@ -404,12 +404,13 @@ class Module:
                 self._raiseOnInvalid(f"{wir} | ")
                 continue
             if(len(wir.outLets) == 0):
+                #breakpoint()
                 _PrintWarning(f"removing wire {wir.name}")
                 lanR = wir.inLet.lane
-                for cx in lanR.inLets:
+                for cx in lanR.inLets.copy():
                     self.cross.remove(cx.delete())
                 cx = wir.inLet
-                if(cx is not None):self.cross.remove(cx.delete())
+                self.cross.remove(cx.delete())
                 self.lanes.remove(lanR)
                 self.wires.remove(wir)
                 didChange = True
@@ -460,7 +461,7 @@ class Module:
                         self._raiseOnInvalid(f"{lan} {ilw} {olw} | ")
                 elif(not olw.isIO):
                     owir = lan.outLet.wire
-                    for cx in owir.outLets:
+                    for cx in owir.outLets.copy():
                         cx.wire = lan.inLets[0].wire
                         cx.wire.outLets.append(cx)
                         cx.invert = cx.invert != invert
