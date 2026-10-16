@@ -6,6 +6,10 @@ try:
 except:
     from util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver
     from preLayout import Layout
+try:
+    import spring
+except:
+    from gen import spring
 
 import time
 from litemapy import Region, BlockState, Schematic
@@ -79,7 +83,7 @@ class Blocks:
     decay       = 0.2
 
     stepSize  = 0.01
-    stepCount = 1000
+    stepCount = 10_000
 
 def safeCurruptBlocks(settings):
     try:
@@ -1052,34 +1056,30 @@ class Module:
 
     def steppedLayout(self):
         STEP  = Blocks.stepSize
-        wireComp = (1,5,22)
-        laneComp = (22,5,1)
+        mainNet = spring.SpringNet()
         for cx in self.cross:
-            cx.preLayout = Layout()
+            cx.preLayout = spring.SpringObj()
+        for wr in self.wires:
+            mapping = list()
+            target = (-1,-1,-1)
+            if(wr.inLet is not None):
+                mapping.append(wr.inLet.preLayout)
+            lan = wr.inLane or wr.outLane
+            if(lan is not None):
+                target = (lan.wire,lan.layer,lan.lane)
+            mapping += [o.preLayout for o in wr.outLets]
+            mainNet.makeSpringWire(target=target,*mapping)
+        for ln in self.lanes:
+            mapping = list()
+            target = (-1,-1,-1)
+            if(wr.inLet is not None):
+                mapping.append(wr.inLet.preLayout)
+            lan = wr.inLane or wr.outLane
+            mapping += [o.preLayout for o in wr.outLets]
+            mainNet.makeSpringLane(target=target,*mapping)
         for displayNumber in range(Blocks.stepCount):
-            print(displayNumber,"",end="\b" * 8,flush=True)
-            for cx in self.cross:
-                # avoide
-                for cx2pre in Layout.FindNearLocation(cx.preLayout.toLoc()):
-                    cx.preLayout.avoide(cx2pre)
-                # avoide
-                #for cx2 in self.cross:
-                #    cx.preLayout.avoide(cx2.preLayout)
-                # wire
-                for wcx in cx.wireVia.outLets:
-                    cx.preLayout.spring(wcx.preLayout,*wireComp)
-                if(cx.wireVia.inLet is not None):
-                    cx.preLayout.spring(cx.wireVia.inLet.preLayout,*wireComp)
-                lan = cx.wireVia.inLane or cx.wireVia.outLane
-                if(lan is not None):
-                    cx.preLayout.rawSpring(lan.wire,lan.layer,lan.lane,*wireComp)
-                # lanes
-                for lcx in cx.laneVia.inLets:
-                    cx.preLayout.spring(lcx.preLayout,*laneComp)
-                cx.preLayout.spring(cx.laneVia.outLet.preLayout,*laneComp)
-            for cx in self.cross:
-                cx.preLayout.move(STEP)
-                #cx.preLayout.move(0.001)
+            print(displayNumber,end="\r",flush=True)
+            mainNet.update(STEP)
         # redo into real
         for cx in self.cross:
             cx.layer = int(cx.preLayout.getY())
