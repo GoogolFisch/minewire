@@ -57,10 +57,37 @@ typedef struct SpringObj {
 
 typedef struct SpringNet {
 	PyObject_HEAD;
-	double strength;
 	HashMap      *hmap;
 	DynamicArray *arr;
 } SpringNetwork;
+
+#define RNG_BUCKET 8
+#define SCALE_FACTOR 256
+static uint64_t rng_State[RNG_BUCKET] = {0};
+
+uin64_t getNextLong(void){
+	struct timespec monotime;
+	clock_gettime(CLOCK_MONOTONIC, &monotime);
+	rng_State[0] += monotime.tv_nsec;
+	rng_State[1] += monotime.tv_sec;
+
+	for(int i = 0;i < RNG_BUCKET;i++){
+		int j = (i + 1) % RNG_BUCKET;
+		rng_State[j] ^= (rng_State[i] << 8) + (rng_State[i] >> 5);
+	}
+	return rng_State[0];
+}
+double getNextDouble(void){
+	uint64_t o = getNextLong();
+	double ONE = 1.0;
+	double TWO = 2.0;
+	uint64_t *PONE = (uint64_t*)&ONE;
+	uint64_t *PTWO = (uint64_t*)&TWO;
+	(*PTWO)--;
+	o &= *PTWO;
+	o |= *PONE;
+	return (*((double*)&o)) - 1.0;
+}
 
 
 static PyMemberDef SpringObj_members[] = {{NULL}};
@@ -242,6 +269,9 @@ static int SpringObj_init(PyObject *op,PyObject *args,PyObject *kwds){
 	}
 	// I don't want to manage the DEC_REF
 	self->parent = (SpringNetwork*)network;
+	self->pos.x = getNextDouble() * SCALE_FACTOR;
+	self->pos.y = getNextDouble() * SCALE_FACTOR;
+	self->pos.z = getNextDouble() * SCALE_FACTOR;
 	return 0;
 }
 static PyObject *SpringObj_getPosition(PyObject *op,void *closure){
@@ -265,6 +295,11 @@ static PyObject *SpringObj_addSpringForce(PyObject *op,PyObject *args){
 	PyObject *springIn;
 	SpringObject *self = (SpringObject*)op;
 	int ok = PyArg_ParseTuple(args,"O",&springIn);
+	if(!PyObject_TypeCheck(springIn,&SpringObjType)){
+		PyErr_SetString(PyExc_TypeError,"This method only accepts SpringObj");
+		return Py_None;
+	}
+	da_appendElement(&(self->arr),springIn);
 	return Py_None;
 }
 
@@ -307,12 +342,14 @@ SpringObj_Error:
 }
 static int SpringNet_init(PyObject *op,PyObject *args,PyObject *kwds){
 	SpringNetwork *self = (SpringNetwork*)op;
+	/*
 	static char *kwlist[] = {"scale",NULL};
 	PyObject *scale;
 	if(!PyArg_ParseTupleAndKeywords(args,kwds,"|O",kwlist,&scale)){
 		return -1;
 	}
 	self->strength = PyFloat_AsDouble(scale);
+	// */
 	return 0;
 }
 static PyObject *SpringNet_register(PyObject *op,PyObject *args){
