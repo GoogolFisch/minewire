@@ -2,10 +2,8 @@
 #import litemapy
 try:
     from gen.util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver
-    from gen.preLayout import Layout
 except:
     from util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver
-    from preLayout import Layout
 try:
     import spring
 except:
@@ -82,7 +80,7 @@ class Blocks:
     temperatur  = 1
     decay       = 0.2
 
-    stepSize  = 0.01
+    stepSize  = 0.1
     stepCount = 10_000
 
 def safeCurruptBlocks(settings):

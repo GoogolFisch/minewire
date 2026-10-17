@@ -9,7 +9,7 @@ class Vector:
         self.z = 0
 
     def _getBucket(self):
-        V = 4
+        V = 8
         return (int(self.x // V),int(self.y // V),int(self.z // V))
     def _getNeighbourBucket(self):
         l = list()
@@ -23,12 +23,12 @@ class Vector:
 
     def _addDiffL(self,base,other):
         self.x += (base.x - other.x) * 1
-        self.y += (base.y - other.y) * 3
+        self.y += (base.y - other.y) * 5
         self.z += (base.z - other.z) * 22
 
     def _addDiffW(self,base,other): 
         self.x += (base.x - other.x) * 22
-        self.y += (base.y - other.y) * 3
+        self.y += (base.y - other.y) * 5
         self.z += (base.z - other.z) * 1
 
     def _addAvoide(self,b,o):
@@ -46,15 +46,20 @@ class Vector:
             self.y += inv * (o.y - b.y)
             self.z += inv * (o.z - b.z)
 
+    def _zero(self):
+        self.x = self.y = self.z = 0
+
 
 class SpringObj:
-    __slots__ = ("pos","vel","count","parent")
+    __slots__ = ("pos","ivel","vel","count","parent")
     def __init__(self):
         self.parent = None
         self.vel = Vector()
+        self.ivel = Vector()
         self.pos = Vector()
+        self.count = 1
         self.pos.x = random.uniform(0,100)
-        self.pos.y = random.uniform(0,100)
+        self.pos.y = random.uniform(0,30)
         self.pos.z = random.uniform(0,100)
     def getPosition(self):
         return (self.pos.x,self.pos.y,self.pos.z)
@@ -67,15 +72,15 @@ class SpringObj:
     def getZ(self):return self.pos.z
 
     def _update(self,step):
-        self.pos.x += self.vel.x * step
-        self.pos.y += self.vel.y * step
-        self.pos.z += self.vel.z * step
+        scale = 1 / self.count
+        self.pos.x += (self.vel.x * scale + self.ivel) * step
+        self.pos.y += (self.vel.y * scale + self.ivel) * step
+        self.pos.z += (self.vel.z * scale + self.ivel) * step
         if(self.pos.x < 1):self.pos.x = 1
         if(self.pos.y < 0):self.pos.x = 0
         if(self.pos.z < 1):self.pos.x = 1
-        self.vel.x = 0
-        self.vel.y = 0
-        self.vel.z = 0
+        self.vel._zero()
+        self.ivel._zero()
 
 
 
@@ -101,7 +106,7 @@ class SpringNet:
             for b in c.pos._getNeighbourBucket():
                 nei = self.hmap.get(b,L)
                 for nx in nei:
-                    c.vel._addAvoide(c.pos,nc.pos)
+                    c.ivel._addAvoide(c.pos,nc.pos)
         for x in self.arr:
             x._update(step)
     def _makeSpring(self,arr,target,map):
@@ -114,6 +119,7 @@ class SpringNet:
             attr.append(so)
         for k in map:
             k.parent = self
+            k.count += len(map)
             attr.append(k)
     def makeSpringWire(self,*map,target=(-1,-1,-1)):
         self._makeSpring(self.wireArrs,target,map)
