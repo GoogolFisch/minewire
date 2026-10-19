@@ -77,7 +77,7 @@ class Blocks:
     author      = "MineWire"
     description = "MineWire generated"
     output      = "./output.litematic"
-    temperatur  = 1
+    temperatur  = 0
     decay       = 0.2
 
     stepSize  = 0.01
@@ -1078,9 +1078,10 @@ class Module:
             mainNet.makeSpringLane(target=target,*mapping)
         for displayNumber in range(Blocks.stepCount):
             #breakpoint()
-            print(self.cross[0].preLayout.getPosition(),
-                displayNumber,end="\r",flush=True)
+            print(f"{displayNumber: 6} {self.cross[0].preLayout.getPosStr()}",
+                end="\r",flush=True)
             mainNet.update(STEP)
+        print()
         # redo into real
         for cx in self.cross:
             cx.layer = int(cx.preLayout.getY())
@@ -1254,7 +1255,7 @@ def main(settings,module,timeTable):
         counter += 1
         print(f"{timeToStr(time.time() - startTime)} " + 
               f"{counter: 2} " + 
-              f"{m.getTotalCost()}\r",flush=True)
+              f"{m.getTotalCost()} {m.getMaxDimension()}\r",flush=True)
     dim,cost,*_ = m.write()
     print(f"after {counter} steps. Dimension:{dim}")
     print(f"cost:{str(cost)}")

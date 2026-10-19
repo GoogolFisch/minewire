@@ -3,10 +3,8 @@ import random
 
 class Vector:
     __slots__ = ("x","y","z")
-    def __init__(self):
-        self.x = 0
-        self.y = 0
-        self.z = 0
+    def __init__(self,v=(0,0,0)):
+        self.x,self.y,self.z = v
 
     def _getBucket(self):
         V = 8
@@ -47,16 +45,28 @@ class Vector:
             self.y += inv * (o.y - b.y)
             self.z += inv * (o.z - b.z)
 
-    def _zero(self):
-        self.x = self.y = self.z = 0
-
-    def _zeroM(self):
-        self.x = self.y = self.z = -0.01
+    def _zero (self): self.x = self.y = self.z = 0
+    def _zeroM(self): self.x = self.y = self.z = -0.01
+    def _addPos(self,other):
+        self.x += other.x
+        self.y += other.y
+        self.z += other.z
+    def _addVelL(self,base,other,cnt):
+        self.x += (other.x / cnt - base.x) * 2.2
+        self.y += (other.y / cnt - base.y) * 0.5
+        self.z += (other.z / cnt - base.z) * 0.1
+    def _addVelW(self,base,other,cnt):
+        self.x += (other.x / cnt - base.x) * 0.1
+        self.y += (other.y / cnt - base.y) * 0.5
+        self.z += (other.z / cnt - base.z) * 2.2
 
 
 class SpringObj:
+    FIRST = None
     __slots__ = ("pos","ivel","vel","count","parent")
     def __init__(self):
+        if(SpringObj.FIRST is None):
+            SpringObj.FIRST = self
         self.parent = None
         self.vel   = Vector()
         self.ivel  = Vector()
@@ -67,6 +77,8 @@ class SpringObj:
         self.pos.z = random.uniform(0,100)
     def getPosition(self):
         return (self.pos.x,self.pos.y,self.pos.z)
+    def getPosStr(self):
+        return f"({self.pos.x: 2.2f},{self.pos.y: 2.2f},{self.pos.z: 2.2f})"
     def setPosition(self,x,y,z):
         self.pos.x = x
         self.pos.y = y
@@ -77,12 +89,13 @@ class SpringObj:
 
     def _update(self,step):
         scale = 1 / self.count
+        #scale = 0.5
         self.pos.x += (self.vel.x * scale + self.ivel.x) * step
         self.pos.y += (self.vel.y * scale + self.ivel.y) * step
         self.pos.z += (self.vel.z * scale + self.ivel.z) * step
         if(self.pos.x < 1):self.pos.x = 1
-        if(self.pos.y < 0):self.pos.x = 0
-        if(self.pos.z < 1):self.pos.x = 1
+        if(self.pos.y < 0):self.pos.y = 0
+        if(self.pos.z < 1):self.pos.z = 1
         self. vel._zero()
         self.ivel._zero()
 
@@ -98,13 +111,21 @@ class SpringNet:
         self.wireArrs = list()
     def update(self,step):
         for la in self.laneArrs:
+            avg = Vector()
             for cl in la:
+                avg._addPos(cl.pos)
                 for c2 in la:
                     cl.vel._addDiffL(cl.pos,c2.pos)
-        for wa in self.laneArrs:
+            #for cl in la:
+            #    cl.vel._addVelL(cl.pos,avg,len(la))
+        for wa in self.wireArrs:
+            avg = Vector()
             for cw in wa:
+                avg._addPos(cl.pos)
                 for c2 in wa:
                     cw.vel._addDiffW(cw.pos,c2.pos)
+            #for cw in wa:
+            #    cw.vel._addVelW(cw.pos,avg,len(wa))
         L = list()
         for c in self.arr:
             #print(c.vel.x)
@@ -116,16 +137,16 @@ class SpringNet:
             x._update(step)
     def _makeSpring(self,arr,target,map):
         attr = list()
-        arr.append(attr)
         if(target[0] != -1):
             so = SpringObj()
-            so.pos = target
+            so.pos = Vector(target)
             self.staticArr.append(so)
             attr.append(so)
         for k in map:
             k.parent = self
             k.count += len(map)
             attr.append(k)
+        arr.append(tuple(attr))
     def makeSpringWire(self,*map,target=(-1,-1,-1)):
         for k in map:
             self.arr.append(k)
