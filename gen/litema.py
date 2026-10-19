@@ -1,9 +1,9 @@
 
 #import litemapy
 try:
-    from gen.util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver
+    from gen.util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver,timeToStr
 except:
-    from util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver
+    from util import Cost,LENGTH_MAX,HEAT_SPREAD,rangeOver,timeToStr
 try:
     import spring
 except:
@@ -80,7 +80,7 @@ class Blocks:
     temperatur  = 1
     decay       = 0.2
 
-    stepSize  = 0.1
+    stepSize  = 0.01
     stepCount = 10_000
 
 def safeCurruptBlocks(settings):
@@ -1057,6 +1057,7 @@ class Module:
         mainNet = spring.SpringNet()
         for cx in self.cross:
             cx.preLayout = spring.SpringObj()
+        print(self.cross[0].preLayout.getPosition())
         for wr in self.wires:
             mapping = list()
             target = (-1,-1,-1)
@@ -1076,7 +1077,9 @@ class Module:
             mapping += [o.preLayout for o in wr.outLets]
             mainNet.makeSpringLane(target=target,*mapping)
         for displayNumber in range(Blocks.stepCount):
-            print(displayNumber,end="\r",flush=True)
+            #breakpoint()
+            print(self.cross[0].preLayout.getPosition(),
+                displayNumber,end="\r",flush=True)
             mainNet.update(STEP)
         # redo into real
         for cx in self.cross:
@@ -1097,7 +1100,7 @@ class Module:
                 cnt += 1
                 avX += lan.lane
                 avZ += lan.wire
-            print(avX,avZ,cnt)
+            # print(avX,avZ,cnt)
             if(cnt == 0):breakpoint()
             if(cnt == 0):cnt = 1
             wr.lane = int(avX // cnt)
@@ -1192,8 +1195,7 @@ class Module:
 
         return didChange
 
-
-    def write(self) -> tuple:
+    def getMaxDimension(self):
         maxX,maxY,maxZ = 0,0,0
         for l in self.lanes:
             maxZ = max(maxZ,l.wire)
@@ -1204,6 +1206,10 @@ class Module:
             maxY = max(maxY,w.end)
             maxX = max(maxX,w.lane)
             olan = w.inLane or w.outLane
+        return maxX,maxY,maxZ
+
+    def write(self) -> tuple:
+        maxX,maxY,maxZ = self.getMaxDimension()
         print("lanes:")
         for o in self.lanes: print(f"- {o}")
         print("wires:")
@@ -1236,16 +1242,19 @@ def main(settings,module,timeTable):
     m = module.carbonCopy(Module,WireVia,LaneVia,Connection)
     print(len(m.cross))
     m.steppedLayout()
-    print(m.getTotalCost(1))
+    print(f"{m.getTotalCost(1)} {m.getMaxDimension()}")
     temp  = int  (Blocks.temperatur)
     decay = float(Blocks.decay     )
     counter = 0
-    timeTable.append(time.time())
+    startTime = time.time()
+    timeTable.append(startTime)
     #while False and m.compact(temp):
     while m.compact(temp):
         temp *= decay
         counter += 1
-        print(counter,m.getTotalCost(),end="\r",flush=True)
+        print(f"{timeToStr(time.time() - startTime)} " + 
+              f"{counter: 2} " + 
+              f"{m.getTotalCost()}\r",flush=True)
     dim,cost,*_ = m.write()
     print(f"after {counter} steps. Dimension:{dim}")
     print(f"cost:{str(cost)}")

@@ -61,3 +61,11 @@ class Cost:
         return diff < temp
 
 
+def timeToStr(s:int):
+    s = int(s)
+    sec = s % 60;s //= 60
+    mi  = s % 60;s //= 60
+    h   = s % 24;s //= 24
+    day = s
+    return f"({day}:{h:02}:{mi:02}:{sec:02})"
+

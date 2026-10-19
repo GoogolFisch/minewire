@@ -21,27 +21,28 @@ class Vector:
                     l.append((b[0] + dx,b[1] + dy,b[2] + dz))
         return l
 
-    def _addDiffL(self,base,other):
-        self.x += (base.x - other.x) * 1
-        self.y += (base.y - other.y) * 5
-        self.z += (base.z - other.z) * 22
+    "28 49 28 vs. 32 56 27"
+    def _addDiffW(self,base,other):
+        self.x += (other.x - base.x) * 0.1
+        self.y += (other.y - base.y) * 0.5
+        self.z += (other.z - base.z) * 2.2
 
-    def _addDiffW(self,base,other): 
-        self.x += (base.x - other.x) * 22
-        self.y += (base.y - other.y) * 5
-        self.z += (base.z - other.z) * 1
+    def _addDiffL(self,base,other): 
+        self.x += (other.x - base.x) * 2.2
+        self.y += (other.y - base.y) * 0.5
+        self.z += (other.z - base.z) * 0.1
 
     def _addAvoide(self,b,o):
         if(b == o):return
-        diff = max((b.x - o.x) ** 2,(b.y - o.y) ** 2,(b.z - o.z) ** 2)
-        diff *= 0.75
-        if(diff < 0.01):
+        sqMag = max((b.x - o.x) ** 2,(b.y - o.y) ** 2,(b.z - o.z) ** 2)
+        sqMag *= 0.75
+        if(sqMag < 0.01):
             V = 0.01
             self.x += random.uniform(-V,V)
             self.y += random.uniform(-V,V)
             self.z += random.uniform(-V,V)
         else:
-            inv = 1 / diff
+            inv = 1 / sqMag
             self.x += inv * (o.x - b.x)
             self.y += inv * (o.y - b.y)
             self.z += inv * (o.z - b.z)
@@ -49,14 +50,17 @@ class Vector:
     def _zero(self):
         self.x = self.y = self.z = 0
 
+    def _zeroM(self):
+        self.x = self.y = self.z = -0.01
+
 
 class SpringObj:
     __slots__ = ("pos","ivel","vel","count","parent")
     def __init__(self):
         self.parent = None
-        self.vel = Vector()
-        self.ivel = Vector()
-        self.pos = Vector()
+        self.vel   = Vector()
+        self.ivel  = Vector()
+        self.pos   = Vector()
         self.count = 1
         self.pos.x = random.uniform(0,100)
         self.pos.y = random.uniform(0,30)
@@ -73,13 +77,13 @@ class SpringObj:
 
     def _update(self,step):
         scale = 1 / self.count
-        self.pos.x += (self.vel.x * scale + self.ivel) * step
-        self.pos.y += (self.vel.y * scale + self.ivel) * step
-        self.pos.z += (self.vel.z * scale + self.ivel) * step
+        self.pos.x += (self.vel.x * scale + self.ivel.x) * step
+        self.pos.y += (self.vel.y * scale + self.ivel.y) * step
+        self.pos.z += (self.vel.z * scale + self.ivel.z) * step
         if(self.pos.x < 1):self.pos.x = 1
         if(self.pos.y < 0):self.pos.x = 0
         if(self.pos.z < 1):self.pos.x = 1
-        self.vel._zero()
+        self. vel._zero()
         self.ivel._zero()
 
 
@@ -96,13 +100,14 @@ class SpringNet:
         for la in self.laneArrs:
             for cl in la:
                 for c2 in la:
-                    c2.vel._addDiffL(cl.pos,c2.pos)
+                    cl.vel._addDiffL(cl.pos,c2.pos)
         for wa in self.laneArrs:
             for cw in wa:
                 for c2 in wa:
-                    c2.vel._addDiffW(cw.pos,c2.pos)
+                    cw.vel._addDiffW(cw.pos,c2.pos)
         L = list()
         for c in self.arr:
+            #print(c.vel.x)
             for b in c.pos._getNeighbourBucket():
                 nei = self.hmap.get(b,L)
                 for nx in nei:
@@ -122,7 +127,11 @@ class SpringNet:
             k.count += len(map)
             attr.append(k)
     def makeSpringWire(self,*map,target=(-1,-1,-1)):
+        for k in map:
+            self.arr.append(k)
         self._makeSpring(self.wireArrs,target,map)
     def makeSpringLane(self,*map,target=(-1,-1,-1)):
+        for k in map:
+            self.arr.append(k)
         self._makeSpring(self.laneArrs,target,map)
 
