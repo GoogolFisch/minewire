@@ -920,13 +920,10 @@ class Module:
             if wv is vparent:continue
             if(wv.start > layer or wv.end < layer):
                 continue
-            if(wv.inLane is not None):
-                if(wv.inWire.start < wire.end and wire.start < wv.inWire.end):
-                    collisions.append(("(2026-09-10T09:10:30)",wv,wb.inWire))
-                    continue
-            if(wv.outLane is not None):
-                if(wv.outWire.start < wire.end and wire.start < wv.outWire.end):
-                    collisions.append(("(2026-09-10T09:10:35)",wv,wb.outWire))
+            lan = wv.inLane or wv.outLane
+            if(lan is not None):
+                if(lan.child.start < wire.end and wire.start < lan.child.end):
+                    collisions.append(("(2026-09-10T09:10:30)",wv,lan.child))
                     continue
             if(wv.wire != parent.wire):
                 continue
@@ -941,6 +938,7 @@ class Module:
         for lv in self.lanes:
             if(wv.start > layer or wv.end < layer):
                 continue
+            if(wire.wire != lv.wire):continue
             if(wire.start <= lv.lane <= wire.end):
                 collisions.append(("(2026-09-10T09:10:47)",lv,None))
                 continue
