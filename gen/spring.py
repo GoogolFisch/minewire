@@ -73,7 +73,7 @@ class SpringObj:
         self.pos   = Vector()
         self.count = 1
         self.pos.x = random.uniform(0,100)
-        self.pos.y = random.uniform(0,30)
+        self.pos.y = random.uniform(0,10)
         self.pos.z = random.uniform(0,100)
     def getPosition(self):
         return (self.pos.x,self.pos.y,self.pos.z)

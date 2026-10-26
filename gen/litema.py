@@ -17,9 +17,11 @@ except:
     from random import randrange
 from random import shuffle
 
+DO_FORCE_CHECK = True
 DO_FORCE_CHECK = False
 TRYS = 100
-OVER_MAX = 64
+OVER_MAX = 16
+DOWN_MAX = 64
 
 laneCounter = 2
 laneAltDown = False
@@ -82,6 +84,7 @@ class Blocks:
 
     stepSize  = 0.01
     stepCount = 10_000
+    #stepCount = 1_000
 
 def safeCurruptBlocks(settings):
     try:
@@ -674,35 +677,99 @@ class Connection:
     def __str__(self):
         return f"[{self.wireVia.name}:{self.layer} {["","~"][self.invert]}{"wl"[self.dirLane]}]"
 
+def dictInGet(dic,key,default=list()):
+    arg = dic.get(key,None)
+    if(arg is None):
+        arg = default
+        dic[key] = arg
+    return arg
 
 
 class Module:
-    __slots__ = ("wires","lanes","cross")
+    __slots__ = ("wires","lanes","cross","listLane","listWire","miscWire")
     def __init__(self,wires,lanes,cross,ref):
         self.wires = wires
         self.lanes = lanes
         self.cross = cross
+        self.listLane = dict()
+        self.listWire = dict()
+        self.miscWire = dict()
 
-    def getLanesAt(self,layer:int,lane:int) -> list:
+    def instertAllCompact(self):
+        for wr in self.wires:
+            arg = dictInGet(self.listWire,wr.wire,list())
+            arg.append(wr)
+            ###
+            lan = wr.inLane or wr.outLane
+            if(lan is None):continue
+            arg = dictInGet(self.listWire,lan.wire,list())
+            arg.append(wr)
+            arg = dictInGet(self.miscWire,lan.lane,list())
+            arg.append(wr)
+        for ln in self.lanes:
+            arg = dictInGet(self.listLane,ln.lane,list())
+            arg.append(ln)
+
+    def testValidity(self):
+        for wr in self.wires:
+            if(wr not in self.listWire.get(wr.wire,list())):
+                raise Exception(f"{wr} was not found at location {wr.wire}")
+            lan = wr.inLane or wr.outLane
+            if(lan is None):continue
+            if(wr not in self.listWire.get(lan.wire,list())):
+                raise Exception(f"{wr} was not found at colocation {lan.wire}")
+            if(wr not in self.miscWire.get(lan.lane,list())):
+                raise Exception(f"{wr} was not found at cocolocation {lan.lane}")
+        for ln in self.lanes:
+            if(ln not in self.listLane.get(ln.lane,list())):
+                raise Exception(f"{wr} was not found at location {wr.wire}")
+
+    def moveLaneVia(self,oldL,lane):
+        if(oldL == lane.lane):return
+        self.listLane[oldL].remove(lane)
+        arg = dictInGet(self.listLane,lane.lane,list())
+        arg.append(lane)
+
+    def moveWireVia(self,oldW,wire):
+        if(oldW == wire.wire):return
+        self.listWire[oldW].remove(wire)
+        arg = dictInGet(self.listWire,wire.wire,list())
+        arg.append(wire)
+
+    def moveMiscWire(self,oldL,newL,wire):
+        if(oldL == newL):return
+        self.miscWire[oldL].remove(wire)
+        arg = dictInGet(self.miscWire,newL,list())
+        arg.append(wire)
+
+
+    def getLanesAt(self,lane:int) -> list:
         out = []
-        for l in self.lanes:
-            if(l.lane != lane):continue
-            lw = l.getIfLayer(layer)
-            if(lw is not None):
-                out.append(lw)
+        L = list()
+        out += self.listLane.get(lane - 1,L)
+        out += self.listLane.get(lane,L)
+        out += self.listLane.get(lane + 1,L)
         return out
 
-    def getWiresAt(self,layer:int,wire:int) -> list:
+    def getWiresAt(self,wire:int) -> list:
         out = []
-        for w in self.wires:
-            if(w.wire != wire):continue
-            ww = w.getIfLayer(layer)
-            if(ww is not None):
-                out.append(ww)
+        L = list()
+        out += self.listWire.get(wire - 1,L)
+        out += self.listWire.get(wire,L)
+        out += self.listWire.get(wire + 1,L)
+        return out
+
+    def getMiscWireAt(self,wire:int) -> list:
+        out = []
+        L = list()
+        out += self.miscWire.get(wire - 1,L)
+        out += self.miscWire.get(wire,L)
+        out += self.miscWire.get(wire + 1,L)
         return out
 
     def wireVCollide(self,wireV:WireVia,debug=False) -> list:
         collisions = []
+        #for wv in self.getWiresAt(wireV.wire):
         for wv in self.wires:
             if(wv is wireV):continue
             intersect = wireV.start <= wv.end and wv.start <= wireV.end
@@ -729,10 +796,17 @@ class Module:
                     if(fwir.start <= owir.end and owir.start <= fwir.end):
                         collisions.append(("(2026-09-09T22:21:11)",wireV,fwir,lay,wv,olan,owir))
                         continue
+        #for wv in self.getMiscWireAt(wireV.lane):
+        for wv in self.wires:
+            if(wv is wireV):continue
+            owir = wv.inWire or wv.outWire
+            olan = wv.inLane or wv.outLane
+            if(olan is not None):
                 if(olan.lane == wireV.lane and wireV.start <= olan.layer <= wireV.end):
                     if(olan.start <= wireV.wire <= olan.end):
                         collisions.append(("(2026-09-10T10:27:22)",wireV,wv,olan))
                         continue
+        #for lv in self.getLanesAt(wireV.lane):
         for lv in self.lanes:
             if(lv is wireV):continue
             intersect = wireV.start <= lv.end and lv.start <= wireV.end
@@ -773,6 +847,7 @@ class Module:
 
     def laneVCollide(self,laneV:WireVia,debug=False) -> list:
         collisions = []
+        #for wv in self.getWiresAt(laneV.wire):
         for wv in self.wires:
             if(wv is laneV):continue
             intersect = laneV.start <= wv.end and wv.start <= laneV.end
@@ -782,19 +857,6 @@ class Module:
             if(diff < 2):
                 collisions.append(("(2026-09-10T09:09:39)",laneV,wv,None))
                 continue
-            olan = wv.inLane or wv.outLane
-            owir = wv.inWire or wv.outWire
-            if(olan is not None):
-                lay = olan.layer
-                flan = laneV.getIfLayer(lay)
-                if(flan is not None and olan.lane == laneV.lane):
-                    if(flan.start <= olan.end and olan.start <= flan.end):
-                        collisions.append(("(2026-09-10T09:09:35)",laneV,wv,olan,lay))
-                        continue
-                if(flan is not None and olan.wire == laneV.wire):
-                    if(owir.start <= laneV.wire <= owir.end):
-                        collisions.append(("(2026-09-10T17:30:05)",laneV,wv,owir,lay))
-                        continue
             if(wv.wire == laneV.wire):
                 for sw in rangeOver(laneV):
                     subW = wv.getIfLayer(sw)
@@ -809,7 +871,23 @@ class Module:
                     if(subL.start <= wv.wire <= subL.end):
                         collisions.append(("(2026-09-10T17:19:59)",laneV,wv,sw,subL,None))
                         break
+        #for wv in self.getMiscWireAt(laneV.lane):
+        for wv in self.wires:
+            olan = wv.inLane or wv.outLane
+            owir = wv.inWire or wv.outWire
+            if(olan is not None):
+                lay = olan.layer
+                flan = laneV.getIfLayer(lay)
+                if(flan is not None and olan.lane == laneV.lane):
+                    if(flan.start <= olan.end and olan.start <= flan.end):
+                        collisions.append(("(2026-09-10T09:09:35)",laneV,wv,olan,lay))
+                        continue
+                if(flan is not None and olan.wire == laneV.wire):
+                    if(owir.start <= laneV.wire <= owir.end):
+                        collisions.append(("(2026-09-10T17:30:05)",laneV,wv,owir,lay))
+                        continue
 
+        #for lv in self.getLanesAt(laneV.lane):
         for lv in self.lanes:
             if(lv is laneV):continue
             intersect = laneV.start <= lv.end and lv.start <= laneV.end
@@ -950,25 +1028,31 @@ class Module:
         baseC = self.getCostDiffLaneV(lv)
         oldW = lv.wire
         oldL = lv.lane
-        minW = max(     1,oldW - OVER_MAX)
-        minL = max(     1,oldL - OVER_MAX)
+        minW = max(     1,oldW - DOWN_MAX)
+        minL = max(     1,oldL - DOWN_MAX)
         maxW = min(999999,oldW + OVER_MAX)
         maxL = min(999999,oldL + OVER_MAX)
         for _ in range(TRYS):
             lv.wire = randrange(minW,maxW)
             lv.lane = randrange(minL,maxL)
             newC = self.getCostDiffLaneV(lv)
-            if newC.testLt(temp,baseC):return True
+            if newC.testLt(temp,baseC):
+                self.moveLaneVia(oldL,lv)
+                return True
         lv.wire = oldW
         for lan in range(minL,maxL):
             lv.lane = lan
             newC = self.getCostDiffLaneV(lv)
-            if newC.testLt(temp,baseC):return True
+            if newC.testLt(temp,baseC):
+                self.moveLaneVia(oldL,lv)
+                return True
         lv.lane = oldL
         for wir in range(minW,maxW):
             lv.wire = wir
             newC = self.getCostDiffLaneV(lv)
-            if newC.testLt(temp,baseC):return True
+            if newC.testLt(temp,baseC):
+                self.moveLaneVia(oldL,lv)
+                return True
         lv.wire = oldW
         lv.lane = oldL
         self.getCostDiffLaneV(lv)
@@ -978,25 +1062,31 @@ class Module:
         baseC = self.getCostDiffWireV(wv)
         oldW = wv.wire
         oldL = wv.lane
-        minW = max(     1,oldW - OVER_MAX)
-        minL = max(     1,oldL - OVER_MAX)
+        minW = max(     1,oldW - DOWN_MAX)
+        minL = max(     1,oldL - DOWN_MAX)
         maxW = min(999999,oldW + OVER_MAX)
         maxL = min(999999,oldL + OVER_MAX)
         for _ in range(TRYS):
             wv.wire = randrange(minW,maxW)
             wv.lane = randrange(minL,maxL)
             newC = self.getCostDiffWireV(wv)
-            if newC.testLt(temp,baseC):return True
+            if newC.testLt(temp,baseC):
+                self.moveWireVia(oldW,wv)
+                return True
         wv.wire = oldW
         for lan in range(minL,maxL):
             wv.lane = lan
             newC = self.getCostDiffWireV(wv)
-            if newC.testLt(temp,baseC):return True
+            if newC.testLt(temp,baseC):
+                self.moveWireVia(oldW,wv)
+                return True
         wv.lane = oldL
         for wir in range(minW,maxW):
             wv.wire = wir
             newC = self.getCostDiffWireV(wv)
-            if newC.testLt(temp,baseC):return True
+            if newC.testLt(temp,baseC):
+                self.moveWireVia(oldW,wv)
+                return True
         wv.wire = oldW
         wv.lane = oldL
         ol = wv.inLane or wv.outLane
@@ -1007,7 +1097,9 @@ class Module:
         for lan in range(1,wv.lane + 4): # TODO
             ol.lane = lan
             newC = self.getCostDiffWireV(wv)
-            if newC.testLt(temp,baseC):return True
+            if newC.testLt(temp,baseC):
+                self.moveMiscWire(oldL,lan,wv)
+                return True
         ol.lane = oldL
         return False
 
@@ -1017,12 +1109,12 @@ class Module:
         wirL = cx.wireVia.lane
         lanW = cx.laneVia.wire
         lanL = cx.laneVia.lane
-        minWW = max(     1,wirW - OVER_MAX)
-        minWL = max(     1,wirL - OVER_MAX)
+        minWW = max(     1,wirW - DOWN_MAX)
+        minWL = max(     1,wirL - DOWN_MAX)
         maxWW = min(999999,wirW + OVER_MAX)
         maxWL = min(999999,wirL + OVER_MAX)
-        minLW = max(     1,lanW - OVER_MAX)
-        minLL = max(     1,lanL - OVER_MAX)
+        minLW = max(     1,lanW - DOWN_MAX)
+        minLL = max(     1,lanL - DOWN_MAX)
         maxLW = min(999999,lanW + OVER_MAX)
         maxLL = min(999999,lanL + OVER_MAX)
         oldY = cx.layer
@@ -1033,7 +1125,10 @@ class Module:
             cx.laneVia.lane = randrange(minLL,maxLL)
             cx.layer        = randrange(0,oldY + OVER_MAX)
             newC = self.getCostDiffCross(cx)
-            if newC.testLt(temp,baseC):return True
+            if newC.testLt(temp,baseC):
+                self.moveLaneVia(lanL,cx.laneVia)
+                self.moveWireVia(wirW,cx.wireVia)
+                return True
         cx.wireVia.lane = wirL
         cx.laneVia.wire = lanW
         for _ in range(TRYS):
@@ -1041,7 +1136,10 @@ class Module:
             cx.laneVia.lane = randrange(minLL,maxLL)
             cx.layer        = randrange(0,oldY + OVER_MAX)
             newC = self.getCostDiffCross(cx)
-            if newC.testLt(temp,baseC):return True
+            if newC.testLt(temp,baseC):
+                self.moveLaneVia(lanL,cx.laneVia)
+                self.moveWireVia(wirW,cx.wireVia)
+                return True
         cx.wireVia.wire = wirW
         cx.laneVia.lane = lanL
         for lay in range(0,oldY + OVER_MAX):
@@ -1142,6 +1240,21 @@ class Module:
     def compact(self,temp:float) -> bool:
         if(DO_FORCE_CHECK):prev = self.getTotalCost()
         didChange = False
+        shuffle(self.cross)
+        if(DO_FORCE_CHECK):print("cross")
+        for cx in self.cross:
+            ch = self.tryCompactCross(temp,cx)
+            didChange |= ch
+            if(DO_FORCE_CHECK and ch):
+                next = self.getTotalCost()
+                if(next.errors > prev.errors):
+                    print("(19:16:38)",cx.wireVia.showContext(),
+                          cx.laneVia.showContext())
+                    breakpoint()
+                    next = self.getTotalCost(True)
+                    return False
+                print(f"{prev} -> {next}")
+                prev = next
         if(DO_FORCE_CHECK):print("wires")
         shuffle(self.wires)
         for wv in self.wires:
@@ -1178,21 +1291,6 @@ class Module:
                     return False
                 print(f"{prev} -> {next}")
                 prev = next
-        if(DO_FORCE_CHECK):print("cross")
-        for cx in self.cross:
-            ch = self.tryCompactCross(temp,cx)
-            didChange |= ch
-            if(DO_FORCE_CHECK and ch):
-                next = self.getTotalCost()
-                if(next.errors > prev.errors):
-                    print("(19:16:38)",cx.wireVia.showContext(),
-                          cx.laneVia.showContext())
-                    breakpoint()
-                    next = self.getTotalCost(True)
-                    return False
-                print(f"{prev} -> {next}")
-                prev = next
-            pass
 
         return didChange
 
@@ -1244,13 +1342,15 @@ def main(settings,module,timeTable):
     print(len(m.cross))
     m.steppedLayout()
     print(f"{m.getTotalCost(1)} {m.getMaxDimension()}")
-    temp  = int  (Blocks.temperatur)
+    temp  = float(Blocks.temperatur)
     decay = float(Blocks.decay     )
     counter = 0
     startTime = time.time()
     timeTable.append(startTime)
+    m.instertAllCompact()
     #while False and m.compact(temp):
     while m.compact(temp):
+        m.testValidity()
         temp *= decay
         counter += 1
         print(f"{timeToStr(time.time() - startTime)} " + 
