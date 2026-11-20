@@ -4,3 +4,6 @@ pip install litemapy
 
 # https://github.com/NickolaiBeloguzov/jsonc-parser/
 pip install jsonc-parser
+
+# https://github.com/MikePopoloski/slang
+#pip install pyslang

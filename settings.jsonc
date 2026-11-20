@@ -27,5 +27,5 @@
 	},
 	"library":"./example/",
 	"input"  :"./example/D-latch.mwire",
-	"type"   :"litema"
+	"type"   :"litema-bad"
 }
